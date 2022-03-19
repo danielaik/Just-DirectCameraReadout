@@ -1,4 +1,4 @@
-# ImFCS-DirectCameraReadout
+# DirectCameraReadout
 Hello! This repository host the source code for just Direct Camera Readout (a stand alone application as published https://github.com/ImagingFCS/Imaging_FCS_1_60.git). Any issues or bug fixes will be transferred here before the next release of ImagingFCS Fiji plugin.
 
 If you use Direct Camera Readout in your research, then please cite our paper: XXX
