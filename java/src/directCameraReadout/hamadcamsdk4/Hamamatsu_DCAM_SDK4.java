@@ -1,11 +1,8 @@
 /*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
  * SDK4 Version 20.12.6051, 20.12.6136
  * Link to dcam-api installer: https://dcam-api.com/downloads/
- * Tested on Orca Flash 4.0 v2 C11440-22C (SN 100261), Orca Flash 4.0 v2 C11440-22CU (SN 750941), Flash 4.0 v3 C13440-20CU (SN 300374), Flash 4.0 C13440-20C (TODO: Lucas Flatten)
- */
+ * Tested on Orca Flash 4.0 v2 C11440-22C (SN 100261), Orca Flash 4.0 v2 C11440-22CU (SN 750941), Flash 4.0 v3 C13440-20CU (SN 300374), Flash 4.0 C13440-20C (Lucas Flatten), Quest C15550-20UP
+*/
 package directCameraReadout.hamadcamsdk4;
 
 import ij.IJ;
@@ -33,7 +30,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import directCameraReadout.gui.DirectCapturePanel;
 import directCameraReadout.gui.DirectCapturePanel.Common;
-import directCameraReadout.gui.DirectCapturePanel.Common_OrcaFlash4;
+import directCameraReadout.gui.DirectCapturePanel.Common_Orca;
 import directCameraReadout.control.FrameCounter;
 import directCameraReadout.control.FrameCounterX;
 import directCameraReadout.workers.Workers.*;
@@ -50,7 +47,7 @@ public class Hamamatsu_DCAM_SDK4 {
     // NOTE: 
     // VERSION of the used SDK4 library.
     // VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this VERSION num in Fiji.App > jars.
-    public static final String VERSION = "v1_1_1";
+    public static final String VERSION = "v1_1_4";
 
     private static void printlog(String msg) {
         if (false) {
@@ -341,7 +338,7 @@ public class Hamamatsu_DCAM_SDK4 {
 
     public static native double getKineticCycleSDK4();
 
-    public static native int setParameterSDK4(double exposureTime, int Width, int Height, int Left, int Top, int Incamerabin, int acqmode, int totalframe, int size_b, int arraysize, int outTriggerKind, double outTriggerDelay, double outTriggerPeriod); //index Left Top start from 1; Width and Heught represent pixel size after factored in "physical binning/incamerabin"
+    public static native int setParameterSDK4(double exposureTime, int Width, int Height, int Left, int Top, int Incamerabin, int acqmode, int totalframe, int size_b, int arraysize, int outTriggerKind, double outTriggerDelay, double outTriggerPeriod, int readoutSpeed, int sensorMode); //index Left Top start from 1; Width and Heught represent pixel size after factored in "physical binning/incamerabin"
 
     public static native short[] runSingleScanSDK4();
 
@@ -360,7 +357,7 @@ public class Hamamatsu_DCAM_SDK4 {
             @Override
             protected Void doInBackground() throws Exception {
 
-                int err = setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 1, 1, Common.size_b, Common.arraysize, Common_OrcaFlash4.OutputTriggerKind, Common_OrcaFlash4.outTriggerDelay, Common_OrcaFlash4.outTriggerPeriod);
+                int err = setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 1, 1, Common.size_b, Common.arraysize, Common_Orca.OutputTriggerKind, Common_Orca.outTriggerDelay, Common_Orca.outTriggerPeriod, Common_Orca.readoutSpeed, Common_Orca.sensorMode);
                 if (err != 0) {
                     IJ.showMessage("SetParameter return " + err);
                 }
@@ -456,7 +453,7 @@ public class Hamamatsu_DCAM_SDK4 {
 
                 // JNI call SetParameter
                 timer1 = System.currentTimeMillis();
-                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_OrcaFlash4.OutputTriggerKind, Common_OrcaFlash4.outTriggerDelay, Common_OrcaFlash4.outTriggerPeriod);
+                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_Orca.OutputTriggerKind, Common_Orca.outTriggerDelay, Common_Orca.outTriggerPeriod, Common_Orca.readoutSpeed, Common_Orca.sensorMode);
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 Common.kineticCycleTime = 1 / getKineticCycleSDK4();
                 DirectCapturePanel.tfExposureTime.setText(String.format("%.6f", Common.kineticCycleTime));// update real kinetic cycle time [s] to GUI
@@ -513,7 +510,7 @@ public class Hamamatsu_DCAM_SDK4 {
 
                 // JNI call SetParameter
                 timer1 = System.currentTimeMillis();
-                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_OrcaFlash4.OutputTriggerKind, Common_OrcaFlash4.outTriggerDelay, Common_OrcaFlash4.outTriggerPeriod);
+                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_Orca.OutputTriggerKind, Common_Orca.outTriggerDelay, Common_Orca.outTriggerPeriod, Common_Orca.readoutSpeed, Common_Orca.sensorMode);
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 // Receive real kinetic cycle and display in GUI
                 Common.kineticCycleTime = 1 / getKineticCycleSDK4(); // Get real kinetic cycle time
@@ -574,7 +571,7 @@ public class Hamamatsu_DCAM_SDK4 {
 
                 // JNI call SetParameter
                 timer1 = System.currentTimeMillis();
-                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, Common.totalFrame, fbuffersize, Common.arraysize, Common_OrcaFlash4.OutputTriggerKind, Common_OrcaFlash4.outTriggerDelay, Common_OrcaFlash4.outTriggerPeriod);
+                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, Common.totalFrame, fbuffersize, Common.arraysize, Common_Orca.OutputTriggerKind, Common_Orca.outTriggerDelay, Common_Orca.outTriggerPeriod, Common_Orca.readoutSpeed, Common_Orca.sensorMode);
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 // Receive real kinetic cycle and display in GUI
                 Common.kineticCycleTime = 1 / getKineticCycleSDK4(); // TODO: get real kinetic cycle time
@@ -637,7 +634,7 @@ public class Hamamatsu_DCAM_SDK4 {
 
                 // JNI call setParameter
                 timer1 = System.currentTimeMillis();
-                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_OrcaFlash4.OutputTriggerKind, Common_OrcaFlash4.outTriggerDelay, Common_OrcaFlash4.outTriggerPeriod);
+                setParameterSDK4(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_Orca.OutputTriggerKind, Common_Orca.outTriggerDelay, Common_Orca.outTriggerPeriod, Common_Orca.readoutSpeed, Common_Orca.sensorMode);
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 // Receive real kinetic cycle and display in GUI
                 Common.kineticCycleTime = 1 / getKineticCycleSDK4(); // Get real kinetic cycle time
@@ -745,7 +742,7 @@ public class Hamamatsu_DCAM_SDK4 {
 
         //write Metadata 
         int t;
-        int nopm = 32;
+        int nopm = 34;
         String[] metadatatag = new String[nopm];
         String[] metadatavalue = new String[nopm];
         t = 0;
@@ -778,6 +775,8 @@ public class Hamamatsu_DCAM_SDK4 {
         metadatatag[t++] = "INTERNAL_LINEINTERVAL";
         metadatatag[t++] = "TIMING_READOUTTIME";
         metadatatag[t++] = "TIMING_GLOBALEXPOSUREDELAY";
+        metadatatag[t++] = "READOUT SPEED";
+        metadatatag[t++] = "SENSOR MODE";
         metadatatag[t++] = "Software";
         metadatatag[t++] = "SDK";
         metadatatag[t++] = "Time Stamp";
@@ -812,6 +811,8 @@ public class Hamamatsu_DCAM_SDK4 {
         metadatavalue[t++] = Double.toString(Hamamatsu_DCAM_SDK4.GetDoubleSDK4("INTERNAL_LINEINTERVAL"));
         metadatavalue[t++] = Double.toString(Hamamatsu_DCAM_SDK4.GetDoubleSDK4("TIMING_READOUTTIME"));
         metadatavalue[t++] = Double.toString(Hamamatsu_DCAM_SDK4.GetDoubleSDK4("TIMING_GLOBALEXPOSUREDELAY"));
+        metadatavalue[t++] = Double.toString(Hamamatsu_DCAM_SDK4.GetDoubleSDK4("READOUTSPEED"));
+        metadatavalue[t++] = Double.toString(Hamamatsu_DCAM_SDK4.GetDoubleSDK4("SENSORMODE"));
         metadatavalue[t++] = "DirectCameraReadout_" + directCameraReadout.gui.DirectCapturePanel.VERSION;
         metadatavalue[t++] = "SDK_" + VERSION;
         Date date = new Date();

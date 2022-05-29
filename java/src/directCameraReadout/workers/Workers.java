@@ -1,8 +1,3 @@
-/*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
- */
 package directCameraReadout.workers;
 
 import directCameraReadout.iccs.ICCS;
@@ -1165,6 +1160,7 @@ public class Workers {
                 }
 
                 if (Common.fromImFCSobj1.settingPlotOption(Common.plotACFCurves, Common.plotTrace, Common.plotAverage, Common.plotJustCCF, CCFdistX, CCFdistY, Common.plotCalibAmplitude, Common.plotCalibDiffusion, Common.isResetCalibPlot, Common.noptsavr, Common.background, Common.plotCalibIntensity, Common.isCalibFixScale)) {
+                    Common.fromImFCSobj1.settingExpParameters(Common.pixelSize * Common.inCameraBinning, Common.objMag, Common.NA, Common.emlambda, Common.sigmaxy);
                     Common.isResetCalibPlot = false;
                     Common.fromImFCSobj1.runPlotACF();
                 }

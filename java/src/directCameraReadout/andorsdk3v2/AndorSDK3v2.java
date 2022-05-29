@@ -1,7 +1,4 @@
 /*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
  * SDK 3 version = 3.15.20005.0
  * Tested on sCMOS SONA-4BV11-CSC-00245-March19
  */

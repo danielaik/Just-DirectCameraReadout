@@ -1,7 +1,4 @@
 /*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
  * 2D Gaussian fitter adapted from Yoshiyuki Arai
  */
 package directCameraReadout.iccs;

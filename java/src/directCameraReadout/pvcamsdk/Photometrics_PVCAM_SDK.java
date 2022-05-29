@@ -1,8 +1,5 @@
 
 /*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
  * Need to be installed:
  * PVCam_3.9.0.4-PMQI_Release_Setup 
  * bundling pvcam64.dll and pvcamDDI.dll does not work

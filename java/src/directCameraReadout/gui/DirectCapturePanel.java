@@ -1,8 +1,3 @@
-/*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
- */
 package directCameraReadout.gui;
 
 import ij.IJ;
@@ -73,7 +68,7 @@ import directCameraReadout.iccs.ICCS;
 
 public class DirectCapturePanel {
 
-    public static final String VERSION = "v1.11";
+    public static final String VERSION = "v1.15";
 
     static boolean DEBUG_TRUE = false; //Debug pane
 
@@ -84,7 +79,7 @@ public class DirectCapturePanel {
     }
 
     private final static boolean IsSaveExcel = true;
-    public static String $camera; //Currently programmed "DU860_BV" "DU888_BV" "DU897_BV" "SONA-4BV11" "C11440-22CU" "C11440-22C" "C13440-20CU" "EVOLVE- 512" "GS144BSI" "C13440-20C"
+    public static String $camera; //Currently programmed "DU860_BV" "DU888_BV" "DU897_BV" "SONA-4BV11" "C11440-22CU" "C11440-22C" "C13440-20CU" "EVOLVE- 512" "GS144BSI" "C13440-20C" "C15550-20UP"
     public static int cameraint;
     public static String[] $mode = { // Current available mode
         "Single Capture",
@@ -93,6 +88,7 @@ public class DirectCapturePanel {
         "Acquisition",
         "ICCS"
     };
+    private static boolean isHamamatsu;
 
     //Main panel
     public static JDirectCaptureComponent JDirectCapturepanelComponentPanel; //extend JFrame
@@ -143,6 +139,8 @@ public class DirectCapturePanel {
     private JComboBox<String> cbOutputTrigger_ham;//Hamamatsu Orca
     private JComboBox<String> cbOutputTrigger_sona;//Sona
     private JToggleButton tbOverlap_sona; //Sona
+    private JComboBox<String> cbReadoutSpeed_ham;//Hamamatsu Orca
+    private JComboBox<String> cbSensorMode_ham;//Hamamatsu Orca
 
     //JCropMode Pane
     private static JCropModePanelComponent JCropModePanelComponentPanel;
@@ -230,6 +228,7 @@ public class DirectCapturePanel {
 
         private static String $impSavedOR = null;//filename
         private static String $impPathOR = null;
+        private static String $impSavingFolderPath = null;
 
         //4/200 works except sona 2048x2048
         public final static int maxE = (4 * 2048 * 2048 * 20);
@@ -261,7 +260,7 @@ public class DirectCapturePanel {
         public static double kineticCycleTime;
         public static int totalFrame;
         public static int plotInterval;
-        public static int cumulativePlotInterval = 100; //setting to 1 will essentially perform calculation back-to back. Increase this number with larger ROI and frame rate
+        public static int cumulativePlotInterval = 10; //setting to 1 will essentially perform calculation back-to back. Increase this number with larger ROI and frame rate
 
         public static int BinXSoft;
         public static int BinYSoft;
@@ -357,6 +356,13 @@ public class DirectCapturePanel {
         public volatile static boolean isICCSValid; // evaluate to true once user make selection on the screen//TODO: volatile neede
 
         public static ImFCSCorrelator fromImFCSobj1; // for non-cumul and cumul ver 2
+
+        //Experimental parameter for CF data fitting on the fly
+        public static double pixelSize = 24; // pixel size in micrometer before in camera pixel binning (if any)
+        public static int objMag = 100;
+        public static double NA = 1.50;
+        public static int emlambda = 583;
+        public static double sigmaxy = 0.8;
 
 
         /*
@@ -522,15 +528,21 @@ public class DirectCapturePanel {
 
     }
 
-    public static class Common_OrcaFlash4 {
+    public static class Common_Orca {//Common for Orca Flash and Orca Quest
 
-        public final static int minHeight = 8;
+        public final static int minHeight = 32;
         //PixelWidth and height must be a multiple of 4
 
         private static String[] OutputTriggerKindArr;//Disabled //Programmable //Global
         public static int OutputTriggerKind;//0-Disabled //1-Programmable //2-Global
         public static double outTriggerDelay;//valid for Programmable only //sec
         public static double outTriggerPeriod;//valid for Programmable only//sec
+
+        private static String[] readoutSpeedArr;//SLOWEST // FASTEST
+        public static int readoutSpeed;//0-DCAMPROP_READOUTSPEED__SLOWEST; 1-DCAMPROP_READOUTSPEED__FASTEST (default for both orca flash and orca quest)
+
+        private static String[] sensorModeArr; //AREA //PHOTONNUMBERRESOLVING (photon count mode run on Quest only)
+        public static int sensorMode;//0-DCAMPROP_SENSORMODE__AREA; 1-DCAMPROP_SENSORMODE__PHOTONNUMBERRESOLVING (photon count run on Quest only)
     }
 
     public static class Common_PhotometricsEvolve {
@@ -611,6 +623,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     res = Hamamatsu_DCAM_SDK4.getDetectorDimensionSDK4();
                     break;
                 case "EVOLVE- 512":
@@ -641,6 +654,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     //Orca NA
                     break;
                 case "EVOLVE- 512":
@@ -678,6 +692,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     //Orca NA
                     break;
                 case "EVOLVE- 512":
@@ -719,6 +734,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     Hamamatsu_DCAM_SDK4.runThread_singlecapture();
                     break;
                 case "EVOLVE- 512":
@@ -777,6 +793,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     Hamamatsu_DCAM_SDK4.runThread_livevideoV2();
                     break;
                 case "EVOLVE- 512":
@@ -837,6 +854,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     Hamamatsu_DCAM_SDK4.runThread_noncumulativeV3();
                     break;
                 case "EVOLVE- 512":
@@ -910,6 +928,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     Hamamatsu_DCAM_SDK4.runThread_cumulativeV3();
                     break;
                 case "EVOLVE- 512":
@@ -962,6 +981,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     Hamamatsu_DCAM_SDK4.runThread_ICCS();
                     break;
                 case "EVOLVE- 512":
@@ -990,6 +1010,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     Hamamatsu_DCAM_SDK4.setStopMechanismSDK4(isstoppressed);
                     break;
                 case "EVOLVE- 512":
@@ -1021,6 +1042,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     err = Hamamatsu_DCAM_SDK4.SystemShutDownSDK4();
                     if (err != 0) {
                         IJ.log("unsucessfull uninit Hamamtsu");
@@ -1089,6 +1111,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     Hamamatsu_DCAM_SDK4.writeExcel(sfile, $exception, showlog);
                     break;
                 case "EVOLVE- 512":
@@ -1219,7 +1242,8 @@ public class DirectCapturePanel {
             }
             resetUIparameter();
             //DisplayImage object creation
-            DisplayImageObj = new DisplayImage();
+            isHamamatsu = DirectCapturePanel.$camera.equals("C11440-22CU") || DirectCapturePanel.$camera.equals("C11440-22C") || DirectCapturePanel.$camera.equals("C13440-20CU") || DirectCapturePanel.$camera.equals("C13440-20C") || DirectCapturePanel.$camera.equals("C15550-20UP");
+            DisplayImageObj = new DisplayImage(isHamamatsu);
 
             createDirectCapturePanel();
             createDimensionPanel();
@@ -1311,14 +1335,39 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
-                    Common.minHeight = Common_OrcaFlash4.minHeight;
-                    Common_OrcaFlash4.outTriggerDelay = 0; //0 us
-                    Common_OrcaFlash4.outTriggerPeriod = 0.0001; //100 us
-                    Common_OrcaFlash4.OutputTriggerKindArr = new String[3];
-                    Common_OrcaFlash4.OutputTriggerKindArr[0] = "Disabled";
-                    Common_OrcaFlash4.OutputTriggerKindArr[1] = "Programmable";
-                    Common_OrcaFlash4.OutputTriggerKindArr[2] = "Global";
-                    Common_OrcaFlash4.OutputTriggerKind = 0;
+                    Common.minHeight = Common_Orca.minHeight;
+                    Common_Orca.outTriggerDelay = 0; //0 us
+                    Common_Orca.outTriggerPeriod = 0.0001; //100 us
+                    Common_Orca.OutputTriggerKindArr = new String[3];
+                    Common_Orca.OutputTriggerKindArr[0] = "Disabled";
+                    Common_Orca.OutputTriggerKindArr[1] = "Programmable";
+                    Common_Orca.OutputTriggerKindArr[2] = "Global";
+                    Common_Orca.OutputTriggerKind = 0;
+                    Common_Orca.readoutSpeedArr = new String[2];
+                    Common_Orca.readoutSpeedArr[0] = "Ultra-quiet";
+                    Common_Orca.readoutSpeedArr[1] = "Standard scan";
+                    Common_Orca.readoutSpeed = 1; //0-DCAMPROP_READOUTSPEED__SLOWEST; 1-DCAMPROP_READOUTSPEED__FASTEST (default for both orca flash and orca quest)
+                    Common_Orca.sensorModeArr = new String[1];
+                    Common_Orca.sensorModeArr[0] = "Area";
+                    Common_Orca.sensorMode = 0;//0-DCAMPROP_SENSORMODE__AREA (default and only mode for flash)
+                    break;
+                case "C15550-20UP":
+                    Common.minHeight = Common_Orca.minHeight;
+                    Common_Orca.outTriggerDelay = 0; //0 us
+                    Common_Orca.outTriggerPeriod = 0.0001; //100 us
+                    Common_Orca.OutputTriggerKindArr = new String[3];
+                    Common_Orca.OutputTriggerKindArr[0] = "Disabled";
+                    Common_Orca.OutputTriggerKindArr[1] = "Programmable";
+                    Common_Orca.OutputTriggerKindArr[2] = "Global";
+                    Common_Orca.OutputTriggerKind = 0;
+                    Common_Orca.readoutSpeedArr = new String[2];
+                    Common_Orca.readoutSpeedArr[0] = "Ultra-quiet";
+                    Common_Orca.readoutSpeedArr[1] = "Standard scan";
+                    Common_Orca.readoutSpeed = 1; //0-DCAMPROP_READOUTSPEED__SLOWEST; 1-DCAMPROP_READOUTSPEED__FASTEST (default for both orca flash and orca quest)
+                    Common_Orca.sensorModeArr = new String[2];
+                    Common_Orca.sensorModeArr[0] = "Area";
+                    Common_Orca.sensorModeArr[1] = "Photon counting";
+                    Common_Orca.sensorMode = 0;//0-DCAMPROP_SENSORMODE__AREA; 1-DCAMPROP_SENSORMODE__PHOTONNUMBERRESOLVING
                     break;
                 case "EVOLVE- 512":
                 case "GS144BSI":
@@ -1409,6 +1458,12 @@ public class DirectCapturePanel {
                 for (int i = 0; i < Common.PreAmpGainArr.size(); i++) {
                     printlog("i " + Common.PreAmpGainArr.get(i));
                 }
+            }
+
+            // Setting Experimental parameters
+            boolean proceed = false;
+            while (!proceed) {
+                proceed = GetExpSettingsDialogue();
             }
 
         }
@@ -1878,28 +1933,33 @@ public class DirectCapturePanel {
                         tiffFN = tiffFN.substring(0, dotind);
                     }
 
-                    JFileChooser fc = new JFileChooser(System.getProperty("user.home"));
+                    JFileChooser fc;
+                    if (Common.$impSavingFolderPath == null) {
+                        fc = new JFileChooser(System.getProperty("user.home"));
+                    } else {
+                        fc = new JFileChooser(Common.$impSavingFolderPath);
+                    }
+
                     fc.setSelectedFile(new File(tiffFN));
                     fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
                     int returnVal = fc.showSaveDialog(null);
 
                     if (returnVal == JFileChooser.APPROVE_OPTION) {
 
-                        if (res.size() == 1) {
+                        Common.$impSavedOR = fc.getSelectedFile().getName();
+                        Common.$impSavingFolderPath = fc.getSelectedFile().getParent(); //fc.getSelectedFile().getParentFile().getAbsolutePath();
 
+                        if (res.size() == 1) {
                             Common.$impPathOR = fc.getSelectedFile().getAbsolutePath();
                             IJ.saveAsTiff(res.get(0), Common.$impPathOR);
-                            IJ.log("Tiff file saved");
+                            IJ.log("Tiff file saved: " + Common.$impSavingFolderPath);
                         } else {
-
                             for (int i = 0; i < res.size(); i++) {
                                 Common.$impPathOR = fc.getSelectedFile().getAbsolutePath() + "_X" + (i + 1);
                                 IJ.saveAsTiff(res.get(i), Common.$impPathOR);
                                 IJ.log("Tiff file saved " + (i + 1));
                             }
                         }
-
-                        Common.$impSavedOR = fc.getSelectedFile().getName();
 
                         //Saving excel file (timer and metadata)
                         if (IsSaveExcel) {
@@ -1971,12 +2031,17 @@ public class DirectCapturePanel {
         };
 
         ActionListener btnSavePressed = (ActionEvent event) -> {
+
             if (Common.isAcquisitionRunning) {
                 JOptionPane.showMessageDialog(null, "Please press stop or wait for acquisition to finish");
             } else {
                 if (Common.ims_cum != null) {
-                    ImagePlus tempPlus = new ImagePlus("to be saved", Common.ims_cum);
-                    if (runSaveMechanism(Common.isSaveDone, tempPlus) != 0) {
+                    if (Common.isSaveDone) {
+                        ImagePlus tempPlus = new ImagePlus("to be saved", Common.ims_cum);
+                        if (runSaveMechanism(Common.isSaveDone, tempPlus) != 0) {
+                            IJ.log("Saving in progress...");
+                        }
+                    } else {
                         IJ.log("Saving in progress...");
                     }
                 } else {
@@ -2149,6 +2214,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     cbInCameraBinning = new JComboBox<>();
                     cbInCameraBinning.setToolTipText("Configure the amount of binning in each direction. Achieved by combining multiple sensor pixels into a single data pixel by binning the values from each sensor pixel together.");
                     cbInCameraBinning.addItem("1 x 1");
@@ -2222,6 +2288,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     tfPanelPhysicalBin.add(new JLabel("Binning: "));
                     tfPanelPhysicalBin.add(cbInCameraBinning);
                     tfPanelPhysicalBin.add(new JLabel(""));
@@ -2272,6 +2339,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     cbInCameraBinning.addActionListener(cbInCameraBinningChanged);
                     break;
                 case "EVOLVE- 512":
@@ -2307,6 +2375,7 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     setSize(DimpanelDimX, DimpanelDimY);
                     break;
                 case "EVOLVE- 512":
@@ -2395,7 +2464,7 @@ public class DirectCapturePanel {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 if (!rbCustomROI.isSelected() && TriggerDimTfKeyListener) {
-                    boolean redrawSelection = UpdateROIwh();
+                    boolean redrawSelection = UpdateROIwh(isHamamatsu);
                     if (redrawSelection) {
                         DisplayImageObj.performROIselection(Common.oLeft - 1, Common.oTop - 1, Common.oWidth, Common.oHeight);
                     }
@@ -2405,7 +2474,7 @@ public class DirectCapturePanel {
             @Override
             public void removeUpdate(DocumentEvent e) {
                 if (!rbCustomROI.isSelected() && TriggerDimTfKeyListener) {
-                    boolean redrawSelection = UpdateROIwh();
+                    boolean redrawSelection = UpdateROIwh(isHamamatsu);
                     if (redrawSelection) {
                         DisplayImageObj.performROIselection(Common.oLeft - 1, Common.oTop - 1, Common.oWidth, Common.oHeight);
                     }
@@ -2415,7 +2484,7 @@ public class DirectCapturePanel {
             @Override
             public void changedUpdate(DocumentEvent e) {
                 if (!rbCustomROI.isSelected() && TriggerDimTfKeyListener) {
-                    boolean redrawSelection = UpdateROIwh();
+                    boolean redrawSelection = UpdateROIwh(isHamamatsu);
                     if (redrawSelection) {
                         DisplayImageObj.performROIselection(Common.oLeft - 1, Common.oTop - 1, Common.oWidth, Common.oHeight);
                     }
@@ -2470,16 +2539,16 @@ public class DirectCapturePanel {
                     boolean redrawSelection = false;
                     Document doc = e.getDocument();
                     if (doc == tfoLeft.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("l");
+                        redrawSelection = UpdateROIlrtb("l", isHamamatsu);
                     }
                     if (doc == tfoRight.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("r");
+                        redrawSelection = UpdateROIlrtb("r", isHamamatsu);
                     }
                     if (doc == tfoTop.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("t");
+                        redrawSelection = UpdateROIlrtb("t", isHamamatsu);
                     }
                     if (doc == tfoBottom.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("b");
+                        redrawSelection = UpdateROIlrtb("b", isHamamatsu);
                     }
                     if (redrawSelection) {
                         DisplayImageObj.performROIselection(Common.oLeft - 1, Common.oTop - 1, Common.oWidth, Common.oHeight);
@@ -2493,16 +2562,16 @@ public class DirectCapturePanel {
                     boolean redrawSelection = false;
                     Document doc = e.getDocument();
                     if (doc == tfoLeft.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("l");
+                        redrawSelection = UpdateROIlrtb("l", isHamamatsu);
                     }
                     if (doc == tfoRight.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("r");
+                        redrawSelection = UpdateROIlrtb("r", isHamamatsu);
                     }
                     if (doc == tfoTop.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("t");
+                        redrawSelection = UpdateROIlrtb("t", isHamamatsu);
                     }
                     if (doc == tfoBottom.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("b");
+                        redrawSelection = UpdateROIlrtb("b", isHamamatsu);
                     }
                     if (redrawSelection) {
                         DisplayImageObj.performROIselection(Common.oLeft - 1, Common.oTop - 1, Common.oWidth, Common.oHeight);
@@ -2516,16 +2585,16 @@ public class DirectCapturePanel {
                     boolean redrawSelection = false;
                     Document doc = e.getDocument();
                     if (doc == tfoLeft.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("l");
+                        redrawSelection = UpdateROIlrtb("l", isHamamatsu);
                     }
                     if (doc == tfoRight.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("r");
+                        redrawSelection = UpdateROIlrtb("r", isHamamatsu);
                     }
                     if (doc == tfoTop.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("t");
+                        redrawSelection = UpdateROIlrtb("t", isHamamatsu);
                     }
                     if (doc == tfoBottom.getDocument()) {
-                        redrawSelection = UpdateROIlrtb("b");
+                        redrawSelection = UpdateROIlrtb("b", isHamamatsu);
                     }
                     if (redrawSelection) {
                         DisplayImageObj.performROIselection(Common.oLeft - 1, Common.oTop - 1, Common.oWidth, Common.oHeight);
@@ -2774,7 +2843,8 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
-                    CameraPane = new JPanel(new GridLayout(1, 2));
+                case "C15550-20UP":
+                    CameraPane = new JPanel(new GridLayout(3, 2));
                     CameraPane.setBorder(BorderFactory.createTitledBorder("Camera"));
                     break;
                 case "EVOLVE- 512":
@@ -2876,13 +2946,30 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
+                    //Triggering
                     cbOutputTrigger_ham = new JComboBox<>();
                     cbOutputTrigger_ham.setToolTipText("Configure output timing");
-                    for (String OutputTriggerKindArr : Common_OrcaFlash4.OutputTriggerKindArr) {
+                    for (String OutputTriggerKindArr : Common_Orca.OutputTriggerKindArr) {
                         cbOutputTrigger_ham.addItem(OutputTriggerKindArr);
                     }
-                    cbOutputTrigger_ham.setSelectedIndex(Common_OrcaFlash4.OutputTriggerKind);
+                    cbOutputTrigger_ham.setSelectedIndex(Common_Orca.OutputTriggerKind);
 
+                    //Readout speed
+                    cbReadoutSpeed_ham = new JComboBox<>();
+                    cbReadoutSpeed_ham.setToolTipText("Configure readout speed: faster scan comes at expense of higher readout noise");
+                    for (String elem : Common_Orca.readoutSpeedArr) {
+                        cbReadoutSpeed_ham.addItem(elem);
+                    }
+                    cbReadoutSpeed_ham.setSelectedIndex(Common_Orca.readoutSpeed);
+
+                    //Sensor mode
+                    cbSensorMode_ham = new JComboBox<>();
+                    cbSensorMode_ham.setToolTipText("Configure sensor mode");
+                    for (String elem : Common_Orca.sensorModeArr) {
+                        cbSensorMode_ham.addItem(elem);
+                    }
+                    cbSensorMode_ham.setSelectedIndex(Common_Orca.sensorMode);
                     break;
 
                 case "EVOLVE- 512":
@@ -2929,8 +3016,13 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     CameraPane.add(new JLabel("Out. Trigger"));
                     CameraPane.add(cbOutputTrigger_ham);
+                    CameraPane.add(new JLabel("Readout Speed"));
+                    CameraPane.add(cbReadoutSpeed_ham);
+                    CameraPane.add(new JLabel("Sensor Mode"));
+                    CameraPane.add(cbSensorMode_ham);
                     break;
                 case "EVOLVE- 512":
                 case "GS144BSI":
@@ -2982,8 +3074,11 @@ public class DirectCapturePanel {
                 case "C11440-22C":
                 case "C13440-20CU":
                 case "C13440-20C":
+                case "C15550-20UP":
                     cbOutputTrigger_ham.addActionListener(cbOutputTrigger_hamChanged);
-                    setSize(250, 263); //setSize(new Dimension(230, 220)); // 230,230
+                    cbReadoutSpeed_ham.addActionListener(cbReadoutSpeed_hamChanged);
+                    cbSensorMode_ham.addActionListener(cbSensorMode_hamChanged);
+                    setSize(250, 320);
                     break;
                 case "EVOLVE- 512":
                 case "GS144BSI":
@@ -3140,8 +3235,8 @@ public class DirectCapturePanel {
 
         private boolean OutputTriggerDialogue() {
             GenericDialog gd = new GenericDialog("Programmable Output Trigger");
-            gd.addNumericField("Delay (us): ", Common_OrcaFlash4.outTriggerDelay * Math.pow(10, 6), 0);
-            gd.addNumericField("Period (us): ", Common_OrcaFlash4.outTriggerPeriod * Math.pow(10, 6), 0);
+            gd.addNumericField("Delay (us): ", Common_Orca.outTriggerDelay * Math.pow(10, 6), 0);
+            gd.addNumericField("Period (us): ", Common_Orca.outTriggerPeriod * Math.pow(10, 6), 0);
             gd.showDialog();
             if (gd.wasCanceled()) {
                 return false;
@@ -3158,8 +3253,8 @@ public class DirectCapturePanel {
                 return false;
             }
             if (gd.wasOKed()) {
-                Common_OrcaFlash4.outTriggerDelay = tempval;
-                Common_OrcaFlash4.outTriggerPeriod = tempval2;
+                Common_Orca.outTriggerDelay = tempval;
+                Common_Orca.outTriggerPeriod = tempval2;
             }
             return true;
         }
@@ -3241,11 +3336,28 @@ public class DirectCapturePanel {
         };
 
         ActionListener cbOutputTrigger_hamChanged = (ActionEvent event) -> {
-            Common_OrcaFlash4.OutputTriggerKind = Arrays.asList(Common_OrcaFlash4.OutputTriggerKindArr).indexOf(cbOutputTrigger_ham.getSelectedItem().toString());
+            Common_Orca.OutputTriggerKind = Arrays.asList(Common_Orca.OutputTriggerKindArr).indexOf(cbOutputTrigger_ham.getSelectedItem().toString());
 
-            if (Common_OrcaFlash4.OutputTriggerKind == 1) { //Programmable
+            if (Common_Orca.OutputTriggerKind == 1) { //Programmable
                 OutputTriggerDialogue();
             }
+        };
+
+        ActionListener cbReadoutSpeed_hamChanged = (ActionEvent event) -> {
+            Common_Orca.readoutSpeed = Arrays.asList(Common_Orca.readoutSpeedArr).indexOf(cbReadoutSpeed_ham.getSelectedItem().toString());
+        };
+
+        ActionListener cbSensorMode_hamChanged = (ActionEvent event) -> {
+            Common_Orca.sensorMode = Arrays.asList(Common_Orca.sensorModeArr).indexOf(cbSensorMode_ham.getSelectedItem().toString());
+
+            if (Common_Orca.sensorMode == 1) {
+                Common_Orca.readoutSpeed = 0;
+                cbReadoutSpeed_ham.setSelectedIndex(Common_Orca.readoutSpeed);
+                cbReadoutSpeed_ham.setEnabled(false);
+            } else {
+                cbReadoutSpeed_ham.setEnabled(true);
+            }
+
         };
 
         ActionListener cbOutputTrigger_sonaChanged = (ActionEvent event) -> {
@@ -4189,7 +4301,7 @@ public class DirectCapturePanel {
 //        tfoBottom.setText(Integer.toString(Common.oBottom));
 //        tfPixelDimension.setText(Integer.toString(Common.oWidth) + " x " + Integer.toString(Common.oHeight));
 //    }
-    private boolean UpdateROIwh() {
+    private boolean UpdateROIwh(boolean isHam) {
 
         boolean proceed = false;
         int tempw = 0, temph = 0;
@@ -4208,14 +4320,49 @@ public class DirectCapturePanel {
             if (tempw == Common.oWidth && temph == Common.oHeight) {
                 return false;
             }
-            oCoordinate = getCenterCoordinate(tempw, temph, Common.MAXpixelwidth / Common.inCameraBinning, Common.MAXpixelheight / Common.inCameraBinning);
 
-            Common.oWidth = oCoordinate[0];
-            Common.oHeight = oCoordinate[1];
-            Common.oLeft = oCoordinate[2];
-            Common.oTop = oCoordinate[3];
-            Common.oRight = Common.oLeft + Common.oWidth - 1;
-            Common.oBottom = Common.oTop + Common.oHeight - 1;
+            if (isHam) {
+                boolean isWidthValid = false, isHeightValid = false;
+
+                int w, h;
+
+                // check if width and coordinate (left) is valid
+                for (w = tempw; w >= Common.minHeight; w--) {
+                    oCoordinate = getCenterCoordinate(w, temph, Common.MAXpixelwidth / Common.inCameraBinning, Common.MAXpixelheight / Common.inCameraBinning);
+                    isWidthValid = istfWHLTValid(oCoordinate[2], oCoordinate[0], Common.inCameraBinning);
+                    if (isWidthValid) {
+                        break;
+                    }
+                }
+
+                // check if height and coordinate (top) is valid
+                for (h = temph; h >= Common.minHeight; h--) {
+                    oCoordinate = getCenterCoordinate(w, h, Common.MAXpixelwidth / Common.inCameraBinning, Common.MAXpixelheight / Common.inCameraBinning);
+                    isHeightValid = istfWHLTValid(oCoordinate[3], oCoordinate[1], Common.inCameraBinning);
+                    if (isHeightValid) {
+                        break;
+                    }
+                }
+
+                oCoordinate = getCenterCoordinate(w, h, Common.MAXpixelwidth / Common.inCameraBinning, Common.MAXpixelheight / Common.inCameraBinning);
+
+                Common.oWidth = oCoordinate[0];
+                Common.oHeight = oCoordinate[1];
+                Common.oLeft = oCoordinate[2];
+                Common.oTop = oCoordinate[3];
+                Common.oRight = Common.oLeft + Common.oWidth - 1;
+                Common.oBottom = Common.oTop + Common.oHeight - 1;
+
+            } else {
+                oCoordinate = getCenterCoordinate(tempw, temph, Common.MAXpixelwidth / Common.inCameraBinning, Common.MAXpixelheight / Common.inCameraBinning);
+
+                Common.oWidth = oCoordinate[0];
+                Common.oHeight = oCoordinate[1];
+                Common.oLeft = oCoordinate[2];
+                Common.oTop = oCoordinate[3];
+                Common.oRight = Common.oLeft + Common.oWidth - 1;
+                Common.oBottom = Common.oTop + Common.oHeight - 1;
+            }
 
             tfoLeft.setText(Integer.toString(Common.oLeft));
             tfoRight.setText(Integer.toString(Common.oRight));
@@ -4250,7 +4397,7 @@ public class DirectCapturePanel {
         //            worker.execute();
     }
 
-    private boolean UpdateROIlrtb(String type) {
+    private boolean UpdateROIlrtb(String type, boolean isHam) {
         boolean proceed = false;
         int temp = 0;
         try {
@@ -4305,7 +4452,23 @@ public class DirectCapturePanel {
                     if (temp > Common.oRight) {
                         temp = Common.oRight;
                     }
-                    Common.oLeft = temp;
+
+                    //check if Left coordinate is valid
+                    if (isHam) {
+                        boolean isValid;
+                        int validValue;
+
+                        for (validValue = temp; validValue >= 1; validValue--) {
+                            isValid = istfWHLTValid(validValue, Common.oRight - validValue + 1, Common.inCameraBinning);
+                            if (isValid) {
+                                break;
+                            }
+                        }
+                        Common.oLeft = validValue;
+                    } else {
+                        Common.oLeft = temp;
+                    }
+
                     Common.oWidth = Common.oRight - Common.oLeft + 1;
                     tfoWidth.setText(Integer.toString(Common.oWidth));
                     break;
@@ -4316,7 +4479,23 @@ public class DirectCapturePanel {
                     if (temp < Common.oLeft) {
                         temp = Common.oLeft;
                     }
-                    Common.oRight = temp;
+
+                    //check if Right coordinate is valid
+                    if (isHam) {
+                        boolean isValid;
+                        int validValue;
+
+                        for (validValue = temp; validValue <= Common.MAXpixelwidth; validValue++) {
+                            isValid = istfWHLTValid(Common.oLeft, validValue - Common.oLeft + 1, Common.inCameraBinning);
+                            if (isValid) {
+                                break;
+                            }
+                        }
+                        Common.oRight = validValue;
+                    } else {
+                        Common.oRight = temp;
+                    }
+
                     Common.oWidth = Common.oRight - Common.oLeft + 1;
                     tfoWidth.setText(Integer.toString(Common.oWidth));
                     break;
@@ -4327,7 +4506,23 @@ public class DirectCapturePanel {
                     if (temp > Common.oBottom) {
                         temp = Common.oBottom;
                     }
-                    Common.oTop = temp;
+
+                    //check if Top coordinate is valid
+                    if (isHam) {
+                        boolean isValid;
+                        int validValue;
+
+                        for (validValue = temp; validValue >= 1; validValue--) {
+                            isValid = istfWHLTValid(validValue, Common.oBottom - validValue + 1, Common.inCameraBinning);
+                            if (isValid) {
+                                break;
+                            }
+                        }
+                        Common.oTop = validValue;
+                    } else {
+                        Common.oTop = temp;
+                    }
+
                     Common.oHeight = Common.oBottom - Common.oTop + 1;
                     tfoHeight.setText(Integer.toString(Common.oWidth));
                     break;
@@ -4338,7 +4533,23 @@ public class DirectCapturePanel {
                     if (temp < Common.oTop) {
                         temp = Common.oTop;
                     }
-                    Common.oBottom = temp;
+
+                    //check if Bottom coordinate is valid
+                    if (isHam) {
+                        boolean isValid;
+                        int validValue;
+
+                        for (validValue = temp; validValue <= Common.MAXpixelheight; validValue++) {
+                            isValid = istfWHLTValid(Common.oTop, validValue - Common.oTop + 1, Common.inCameraBinning);
+                            if (isValid) {
+                                break;
+                            }
+                        }
+                        Common.oBottom = validValue;
+                    } else {
+                        Common.oBottom = temp;
+                    }
+
                     Common.oHeight = Common.oBottom - Common.oTop + 1;
                     tfoHeight.setText(Integer.toString(Common.oWidth));
                     break;
@@ -4484,6 +4695,7 @@ public class DirectCapturePanel {
         * getCenterCoordinate:
         * getRoiCoordinateFromCorner
         * getRoiCoordinateFromCenter
+        * istfWHLTValid
     
      */
     public static boolean CCFselectorChecker(int oW, int oH, int ShiftX, int ShiftY, int binX, int binY, int px, int py, int roiW, int roiH) {
@@ -4642,6 +4854,23 @@ public class DirectCapturePanel {
         }
 //            IJ.log("fromGetCoordinate; left: " + result[0] + ", right: " + result[1] + ", top: " + result[2] + ", bottom: " + result[3]);
         return result;
+
+    }
+
+    private boolean istfWHLTValid(int left, int width, int bin) {
+        // applies to top/height
+        // decide if user entered W and H parameters are valid
+        boolean isValidL, isValidW;
+
+        //check width valid
+        int right = left + width - 1;
+        isValidW = ((right - left + 1) * bin) % 4 == 0;
+
+        //check left valid
+        int scaledleft = (left * bin) - (bin - 1);
+        isValidL = (scaledleft - 1) % 4 == 0;
+
+        return (isValidL && isValidW);
 
     }
 
@@ -4901,5 +5130,68 @@ public class DirectCapturePanel {
         UIManager.put("ComboBox.font", new java.awt.Font($panelFont, java.awt.Font.PLAIN, panelFontSize));
         UIManager.put("TextField.font", new java.awt.Font($panelFont, java.awt.Font.PLAIN, panelFontSize));
         UIManager.put("ToolTip.font", new java.awt.Font($panelFont, java.awt.Font.PLAIN, panelFontSize));
+    }
+
+    /*
+        * Update experimental settings:
+        * pixelSize (before in-camera binning), objMag, NA, emlambda, sigmaxy   
+     */
+    public boolean GetExpSettingsDialogue() {
+
+        GenericDialog gd = new GenericDialog("Experimental Settings");
+        gd.addNumericField("Pixel size", Common.pixelSize, 1, 4, "\u03BCm");
+        gd.addNumericField("Magnification", Common.objMag, 0, 4, "\u00D7");
+        gd.addNumericField("NA", Common.NA, 1, 4, "");
+        gd.addNumericField("\u03BB (emission)", Common.emlambda, 0, 4, "nm");
+        gd.addNumericField("PSF (xy)", Common.sigmaxy, 1, 4, "");
+        gd.hideCancelButton();
+        gd.setOKLabel​("Set");
+        gd.showDialog();
+
+        if (gd.wasOKed()) {
+            double ps = (double) gd.getNextNumber();
+            int objmag = (int) gd.getNextNumber();
+            double na = (double) gd.getNextNumber();
+            int em = (int) gd.getNextNumber();
+            double sigma = (double) gd.getNextNumber();
+
+            if (!Double.isNaN(ps) && ps > 0) {
+                Common.pixelSize = ps;
+            } else {
+                IJ.log("Invalid Pixel size");
+                return false;
+            }
+
+            if (objmag > 0) {
+                Common.objMag = objmag;
+            } else {
+                IJ.log("Invalid Magnification");
+                return false;
+            }
+
+            if (!Double.isNaN(na) && na > 0) {
+                Common.NA = na;
+            } else {
+                IJ.log("Invalid NA");
+                return false;
+            }
+
+            if (em > 0) {
+                Common.emlambda = em;
+            } else {
+                IJ.log("Invalid Lambda emission");
+                return false;
+            }
+
+            if (!Double.isNaN(sigma) && sigma > 0) {
+                Common.sigmaxy = sigma;
+            } else {
+                IJ.log("Invalid PSF");
+                return false;
+            }
+
+        }
+
+        return true;
     }
 }

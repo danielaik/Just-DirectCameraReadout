@@ -1,11 +1,8 @@
 /*
- * Created with NetBeans IDE 12.0
- *  User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- *  Date: Feb 2022
  *  Supported camera
  *  1) Andor iXon "DU860_BV" "DU888_BV" "DU897_BV", Sona "SONA-4BV11"  
  *  2) Photometrics "EVOLVE- 512" "GS144BSI"
- *  3) Hamamatsu Orca Flash 4.0 "C11440-22CU" "C11440-22C" "C13440-20CU" "C13440-20C"
+ *  3) Hamamatsu Orca Flash 4.0 "C11440-22CU" "C11440-22C" "C13440-20CU" "C13440-20C" "C15550-20UP"
  */
 package directCameraReadout;
 
@@ -193,6 +190,7 @@ public class DirectCapture {
                     case "C11440-22C":
                     case "C13440-20CU":
                     case "C13440-20C":
+                    case "C15550-20UP":
                         if (isHAMApreviouslyConnected) {
                             IJ.showMessage("program is already running Hamamatsu");
                             break;
@@ -441,6 +439,24 @@ public class DirectCapture {
                 }
             }
         }
+        if (UserSelectedCameraModel == "C15550-20UP") {
+            if (isHAMApreviouslyConnected) {
+                IJ.showMessage("program is already running Hamamatsu");
+            } else {
+                isHAMAconnected = (SDK4InitializationErrorCode == 0);
+                if (isHAMAconnected) {
+                    Common.isShutSystemPressed = false;
+                    isHAMApreviouslyConnected = true;
+                    Hamamatsu_DCAM_SDK4.InitializeHamaSDK4();
+                    Common.$serialNumber = Hamamatsu_DCAM_SDK4.GetStringSDK4("CAMERAID");
+                    Common.$cameraHeadModel = Hamamatsu_DCAM_SDK4.GetStringSDK4("MODEL");
+                    ORpanelobj = new DirectCapturePanel().new ORpanel(CameraType[2]);
+                    DirectCapturePanel.JDirectCapturepanelComponentPanel.setVisible(true);
+                    Common.isgpupresent = isgpupresent;
+                }
+            }
+        }
+        
 
         if (UserSelectedCameraModel == "EVOLVE- 512") {
 
@@ -505,6 +521,9 @@ public class DirectCapture {
         }
         if (full.contains("C13440-20C")) {
             return "C13440-20C";
+        }
+        if (full.contains("C15550-20UP")) {
+            return "C15550-20UP";
         }
         if (full.contains("EVOLVE- 512")) {
             return "EVOLVE- 512";

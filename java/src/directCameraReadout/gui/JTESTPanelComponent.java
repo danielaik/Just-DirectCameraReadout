@@ -1,8 +1,3 @@
-/*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
- */
 package directCameraReadout.gui;
 
 import ij.IJ;
@@ -137,9 +132,15 @@ public class JTESTPanelComponent extends JFrame {
 
     ActionListener btnTestPressed = (ActionEvent event) -> {
 
-//        IJ.log("outtrig: " + Common_OrcaFlash4.OutputTriggerKind);
-//        IJ.log("OutDelay: " + Common_OrcaFlash4.outTriggerDelay);
-//        IJ.log("OutPeriod: " + Common_OrcaFlash4.outTriggerPeriod);
+        IJ.log("in camera binning: " + Common.inCameraBinning);
+        IJ.log("pixel size = " + Common.pixelSize + ", magnification = " + Common.objMag + ", NA = " + Common.NA + ", Emission = " + Common.emlambda + ", PSF(xy) = " + Common.sigmaxy);
+
+//        IJ.log("size_a: " + DirectCapturePanel.Common.size_a + ", size_b: " + DirectCapturePanel.Common.size_b);
+//        IJ.log("Ham READOUTSPEED: " + Common_Orca.readoutSpeed);
+//        IJ.log("Ham SENSORMODE: " + Common_Orca.sensorMode);
+//        IJ.log("outtrig: " + Common_Orca.OutputTriggerKind);
+//        IJ.log("OutDelay: " + Common_Orca.outTriggerDelay);
+//        IJ.log("OutPeriod: " + Common_Orca.outTriggerPeriod);
         IJ.log("Total memory: " + DirectCapturePanel.sysinfo.totalMem() / 1000000 + " MB");
         IJ.log("Used memory: " + DirectCapturePanel.sysinfo.usedMem() / 1000000 + " MB");
         IJ.log("Free memory: " + DirectCapturePanel.sysinfo.freeMem() / 1000000 + " MB");

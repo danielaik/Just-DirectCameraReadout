@@ -99,7 +99,7 @@ public class GUI extends JFrame implements ActionListener {
         sl_requirementPanel.putConstraint(SpringLayout.NORTH, requirementTxt, 5, SpringLayout.NORTH, requirementPanel);
         sl_requirementPanel.putConstraint(SpringLayout.WEST, requirementTxt, 5, SpringLayout.WEST, requirementPanel);
         sl_requirementPanel.putConstraint(SpringLayout.EAST, requirementTxt, -5, SpringLayout.EAST, requirementPanel);
-        requirementTxt.setText("Suppored cameras:\n\nAndor iXon 860, 888, 897\nAndor Sona 11\nHamamatsu Orca\nPhotometrics Evolve 512, Prime 95B");
+        requirementTxt.setText("Suppored cameras:\n\nAndor iXon 860, 888, 897\nAndor Sona 11\nHamamatsu ORCA Flash, QUEST \nPhotometrics Evolve 512, Prime 95B");
         requirementTxt.setLineWrap(true);
         requirementTxt.setEditable(false);
         requirementTxt.setBackground(getBackground());

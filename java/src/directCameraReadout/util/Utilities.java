@@ -1,8 +1,3 @@
-/*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
- */
 package directCameraReadout.util;
 
 import ij.IJ;
@@ -44,9 +39,9 @@ public class Utilities {
     30/300_000_000 = 5951ms/18GB                 Out of memory
     
          */
-        IJ.log("Total memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.totalMem() / 1000000 + " MB");
-        IJ.log("Used memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.usedMem() / 1000000 + " MB");
-        IJ.log("Free memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.freeMem() / 1000000 + " MB");
+//        IJ.log("Total memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.totalMem() / 1000000 + " MB");
+//        IJ.log("Used memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.usedMem() / 1000000 + " MB");
+//        IJ.log("Free memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.freeMem() / 1000000 + " MB");
 
         long availmem = DirectCapturePanel.sysinfo.totalMem(); //byte
 

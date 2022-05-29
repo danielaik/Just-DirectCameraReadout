@@ -1,7 +1,4 @@
 /**
- *  Created with NetBeans IDE 12.0
- *  User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- *  Date: Feb 2022
  *  SDK2 version = 2.103.30031.0
  *  Tested on DU860(Thorsten Lab DU-860D-CS0-BV-500-X-3667, DU-860E-CS0-BV-X-9388, DU-860D-CS0-BV-X-6682), DU888 (Loan from Andor UK), DU897 (Winston Lab)
  */

@@ -1,8 +1,3 @@
-/*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
- */
 package directCameraReadout.image;
 
 import ij.IJ;
@@ -40,13 +35,15 @@ public class DisplayImage {
     int posRoiY;
     double scimp;
     final int multiplierFactor = 30000;//49152;
+    boolean isHamamatsu;
 
     public ArrayList<ArrayList<int[]>> aListArrayBuffer = new ArrayList<>(); //o index, 1 value
 //        private ArrayList<ArrayList<int[]>> aListCroppedModeArrayBuffer = new ArrayList<>(); //o index, 1 value
 
-    public DisplayImage() {
+    public DisplayImage(boolean isHamamatsu) {
 
         isReadConfig = false;
+        this.isHamamatsu = isHamamatsu;
 
         if (isReadConfig) {
 //            IJ.log("able to read config file, proceed to fill from config");
@@ -207,6 +204,19 @@ public class DisplayImage {
 
     }
 
+    private boolean checkLeftOrTopValid(int left, int bin) {
+        //Only for hamamatsu ROI requirement
+        // applied to top
+        int scaledleft = (left * bin) - (bin - 1);
+        return (scaledleft - 1) % 4 == 0;
+    }
+
+    private boolean checkWidthOrHeightValid(int left, int right, int bin) {
+        //Only for hamamatsu ROI requirement
+        // applied to top;bottom
+        return ((right - left + 1) * bin) % 4 == 0;
+    }
+
     MouseListener impcanDisplayImageMouseUsed = new MouseListener() {
         @Override
         public void mouseClicked(MouseEvent e) {// update acquisition AOIs namely left and top 
@@ -228,7 +238,40 @@ public class DisplayImage {
                     posRoiX = initposx + 1;
                     posRoiY = initposy + 1;
 
-                    AOIsparam = getRoiCoordinateFromCenter(posRoiX, posRoiY, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight, imp.getWidth(), imp.getHeight()); //TODO add real width and height for acquisition
+                    if (isHamamatsu) {
+                        boolean isLeftValid = false, isTopValid = false;
+                        // Width and Height should be valid at this stage
+
+                        int i, j;
+
+                        // check whether Left is valid
+                        for (i = posRoiX; i >= 1; i--) {
+                            AOIsparam = getRoiCoordinateFromCenter(i, posRoiY, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight, imp.getWidth(), imp.getHeight()); //TODO add real width and height for acquisition
+                            int templeft = AOIsparam[0];
+                            isLeftValid = checkLeftOrTopValid(templeft, DirectCapturePanel.Common.inCameraBinning);
+
+                            if (isLeftValid) {
+                                break;
+                            }
+                        }
+
+                        // check whether Top is valid
+                        for (j = posRoiY; j >= 1; j--) {
+                            AOIsparam = getRoiCoordinateFromCenter(i, j, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight, imp.getWidth(), imp.getHeight()); //TODO add real width and height for acquisition
+                            int temptop = AOIsparam[2];
+                            isTopValid = checkLeftOrTopValid(temptop, DirectCapturePanel.Common.inCameraBinning);
+
+                            if (isTopValid) {
+                                break;
+                            }
+                        }
+
+                        AOIsparam = getRoiCoordinateFromCenter(i, j, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight, imp.getWidth(), imp.getHeight());
+
+                    } else {
+                        AOIsparam = getRoiCoordinateFromCenter(posRoiX, posRoiY, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight, imp.getWidth(), imp.getHeight());
+                    }
+
                     DirectCapturePanel.Common.oLeft = AOIsparam[0];
                     DirectCapturePanel.Common.oTop = AOIsparam[2];
                     DirectCapturePanel.Common.oRight = DirectCapturePanel.Common.oLeft + DirectCapturePanel.Common.oWidth - 1;
@@ -258,17 +301,84 @@ public class DisplayImage {
                 Roi roi2 = imp.getRoi();
 
                 if (roi2 != null) {
-                    Rectangle rect = roi2.getBounds();
-                    DirectCapturePanel.Common.oLeft = (int) rect.getX() + 1;
-                    DirectCapturePanel.Common.oTop = (int) rect.getY() + 1;
-                    DirectCapturePanel.Common.oWidth = (int) rect.getWidth();
-                    DirectCapturePanel.Common.oHeight = (int) rect.getHeight();
-                    if (DirectCapturePanel.Common.oHeight < DirectCapturePanel.Common.minHeight) {
-                        DirectCapturePanel.Common.oHeight = DirectCapturePanel.Common.minHeight;
-                    }
-                    DirectCapturePanel.Common.oRight = DirectCapturePanel.Common.oLeft + DirectCapturePanel.Common.oWidth - 1;
-                    DirectCapturePanel.Common.oBottom = DirectCapturePanel.Common.oTop + DirectCapturePanel.Common.oHeight - 1;
 
+                    Rectangle rect = roi2.getBounds();
+
+                    if (isHamamatsu) {
+
+                        boolean isLeftValid = false, isTopValid = false, isWidthValid = false, isHeightValid = false;
+
+                        int templeft = (int) rect.getX() + 1;
+                        int temptop = (int) rect.getY() + 1;
+                        int tempwidth = (int) rect.getWidth();
+                        int tempheight = (int) rect.getHeight();
+                        if (tempheight < DirectCapturePanel.Common.minHeight) {
+                            tempheight = DirectCapturePanel.Common.minHeight;
+                        }
+                        if (tempwidth < DirectCapturePanel.Common.minHeight) {
+                            tempwidth = DirectCapturePanel.Common.minHeight;
+                        }
+
+                        int i, w, j, h;
+
+                        //check if Left is valid
+                        for (i = templeft; i >= 1; i--) {
+                            isLeftValid = checkLeftOrTopValid(i, DirectCapturePanel.Common.inCameraBinning);
+                            if (isLeftValid) {
+                                break;
+                            }
+                        }
+
+                        //check if Width is valid
+                        for (w = tempwidth; w >= DirectCapturePanel.Common.minHeight; w--) {
+                            isWidthValid = checkWidthOrHeightValid(i, (i + w - 1), DirectCapturePanel.Common.inCameraBinning);
+                            if (isWidthValid) {
+                                break;
+                            }
+                        }
+
+                        //check if Top is valid
+                        for (j = temptop; j >= 1; j--) {
+                            isTopValid = checkLeftOrTopValid(j, DirectCapturePanel.Common.inCameraBinning);
+                            if (isTopValid) {
+                                break;
+                            }
+                        }
+                        //check if Height is valid
+                        for (h = tempheight; h >= DirectCapturePanel.Common.minHeight; h--) {
+                            isHeightValid = checkWidthOrHeightValid(j, (j + h - 1), DirectCapturePanel.Common.inCameraBinning);
+                            if (isHeightValid) {
+                                break;
+                            }
+                        }
+
+                        DirectCapturePanel.Common.oLeft = i;
+                        DirectCapturePanel.Common.oTop = j;
+                        DirectCapturePanel.Common.oWidth = w;
+                        DirectCapturePanel.Common.oHeight = h;
+                        if (DirectCapturePanel.Common.oHeight < DirectCapturePanel.Common.minHeight) {
+                            DirectCapturePanel.Common.oHeight = DirectCapturePanel.Common.minHeight;
+                        }
+                        if (DirectCapturePanel.Common.oWidth < DirectCapturePanel.Common.minHeight) {
+                            DirectCapturePanel.Common.oWidth = DirectCapturePanel.Common.minHeight;
+                        }
+                        DirectCapturePanel.Common.oRight = DirectCapturePanel.Common.oLeft + DirectCapturePanel.Common.oWidth - 1;
+                        DirectCapturePanel.Common.oBottom = DirectCapturePanel.Common.oTop + DirectCapturePanel.Common.oHeight - 1;
+
+                    } else {
+                        DirectCapturePanel.Common.oLeft = (int) rect.getX() + 1;
+                        DirectCapturePanel.Common.oTop = (int) rect.getY() + 1;
+                        DirectCapturePanel.Common.oWidth = (int) rect.getWidth();
+                        DirectCapturePanel.Common.oHeight = (int) rect.getHeight();
+                        if (DirectCapturePanel.Common.oHeight < DirectCapturePanel.Common.minHeight) {
+                            DirectCapturePanel.Common.oHeight = DirectCapturePanel.Common.minHeight;
+                        }
+                        if (DirectCapturePanel.Common.oWidth < DirectCapturePanel.Common.minHeight) {
+                            DirectCapturePanel.Common.oWidth = DirectCapturePanel.Common.minHeight;
+                        }
+                        DirectCapturePanel.Common.oRight = DirectCapturePanel.Common.oLeft + DirectCapturePanel.Common.oWidth - 1;
+                        DirectCapturePanel.Common.oBottom = DirectCapturePanel.Common.oTop + DirectCapturePanel.Common.oHeight - 1;
+                    }
                 }
 
                 Roi roi3 = new Roi(DirectCapturePanel.Common.oLeft - 1, DirectCapturePanel.Common.oTop - 1, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight);

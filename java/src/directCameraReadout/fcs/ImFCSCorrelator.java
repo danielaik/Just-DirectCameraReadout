@@ -1,7 +1,4 @@
 /*
- * Created with NetBeans IDE 12.0
- * User: Daniel Y.K. Aik <daniel.aik@u.nus.edu> GitHub @danielaik
- * Date: Feb 2022
  * Remarks: Software correlator scheme adapted from ImFCS version 1.52 
  *      (https://github.com/ImagingFCS/Imaging_FCS_1_52)
  *      (https://www.dbs.nus.edu.sg/lab/BFL/imfcs_image_j_plugin.html)
@@ -142,6 +139,14 @@ public class ImFCSCorrelator {
 
         return true;
 
+    }
+
+    public void settingExpParameters(double pixsize, int objmag, double na, int em, double sigma) {
+        this.pixelsize = pixsize;
+        this.objmag = objmag;
+        this.NA = na;
+        this.emlambda = em;
+        this.sigma = sigma;
     }
 
     //settings needed to be updated OR
@@ -712,7 +717,7 @@ public class ImFCSCorrelator {
                             calcAveCF(0);//acquisition mode CCF just CCF plot; calibration mode CCF (single function) just CCF
                             plotCF(tmproi, 4, false);//plot average CCF, or ACF
                         } else {
-                            calcAveCF(2);//acquisition CCF multiple functions averaged
+                            calcAveCF(2);//acquisition CCF multiple functions averaged; calibration mode CCF multiple functions
                             plotCF(tmproi, 5, false);//plot average of CCF, ACF1, ACF2 in a single plot
                         }
                     } else {
@@ -2567,13 +2572,13 @@ public class ImFCSCorrelator {
         newPanelSettings[tmpct++] = "8";
         newPanelSettings[tmpct++] = "FCS";
         newPanelSettings[tmpct++] = "";
-        newPanelSettings[tmpct++] = "24";
+        newPanelSettings[tmpct++] = Double.toString(pixelsize);
         newPanelSettings[tmpct++] = "";
-        newPanelSettings[tmpct++] = "100";
-        newPanelSettings[tmpct++] = "1.45";
-        newPanelSettings[tmpct++] = "515";
+        newPanelSettings[tmpct++] = Double.toString(objmag);
+        newPanelSettings[tmpct++] = Double.toString(NA);
+        newPanelSettings[tmpct++] = Double.toString(emlambda);
         newPanelSettings[tmpct++] = "";
-        newPanelSettings[tmpct++] = "0.8";
+        newPanelSettings[tmpct++] = Double.toString(sigma);
         newPanelSettings[tmpct++] = "";
         newPanelSettings[tmpct++] = "";
         newPanelSettings[tmpct++] = "";
