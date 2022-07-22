@@ -68,7 +68,7 @@ import directCameraReadout.iccs.ICCS;
 
 public class DirectCapturePanel {
 
-    public static final String VERSION = "v1.15";
+    public static final String VERSION = "v1.16";
 
     static boolean DEBUG_TRUE = false; //Debug pane
 
@@ -242,6 +242,7 @@ public class DirectCapturePanel {
         public static int size_r;
         public static int size_c;
 
+        private static final double maximumBytePerStack = 4000000000f; //max bytes per stacks. lets set this to 4 billion bytes/4GB// assume 16-bit images 32x32 maxframe = 4000000000/(2*32*32)
         public static boolean isShutSystemPressed;
         public volatile static boolean isAcquisitionRunning;
         public volatile static boolean isPrematureTermination;
@@ -1857,7 +1858,7 @@ public class DirectCapturePanel {
         }
 
         private ArrayList<ImagePlus> getListOfStacks(ImagePlus fullimp) {
-            double max = 2100000000; //max bytes per stacks. lets set this to 2 billion bytes/2GB// assume 16-bit images 32x32 maxframe = 2100000000/(2*32*32)
+            final double max = Common.maximumBytePerStack;
             double fullsizeinbytes = fullimp.getSizeInBytes();
             int width = fullimp.getWidth();
             int height = fullimp.getHeight();

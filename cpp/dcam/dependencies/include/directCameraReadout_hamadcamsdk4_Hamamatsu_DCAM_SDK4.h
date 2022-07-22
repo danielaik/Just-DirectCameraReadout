@@ -110,10 +110,10 @@ JNIEXPORT jdouble JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1DCAM_
 /*
  * Class:     directCameraReadout_hamadcamsdk4_Hamamatsu_DCAM_SDK4
  * Method:    setParameterSDK4
- * Signature: (DIIIIIIIIIIDD)I
+ * Signature: (DIIIIIIIIIIDDII)I
  */
 JNIEXPORT jint JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1DCAM_1SDK4_setParameterSDK4
-  (JNIEnv *, jclass, jdouble, jint, jint, jint, jint, jint, jint, jint, jint, jint, jint, jdouble, jdouble);
+  (JNIEnv *, jclass, jdouble, jint, jint, jint, jint, jint, jint, jint, jint, jint, jint, jdouble, jdouble, jint, jint);
 
 /*
  * Class:     directCameraReadout_hamadcamsdk4_Hamamatsu_DCAM_SDK4

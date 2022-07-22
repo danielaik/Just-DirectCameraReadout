@@ -102,20 +102,20 @@ public class JTESTPanelComponent extends JFrame {
     }
 
     ActionListener btnTest4Pressed = (ActionEvent event) -> {
-        long time = System.nanoTime();
-        /* 
-            Excplicit GC
-         */
-        Common.bufferArray1D = null;
-        Common.imp_cum = null;
-        Common.ims_cum = null;
-        Common.ims_nonCumRed = null;
-        Common.ims_nonCumGreen = null;
-        System.gc();
-        /*
-            Excplicit GC
-         */
-        IJ.log("ran explicit GC: " + (System.nanoTime() - time) / 1000000 + " ms");
+//        long time = System.nanoTime();
+//        /* 
+//            Excplicit GC
+//         */
+//        Common.bufferArray1D = null;
+//        Common.imp_cum = null;
+//        Common.ims_cum = null;
+//        Common.ims_nonCumRed = null;
+//        Common.ims_nonCumGreen = null;
+//        System.gc();
+//        /*
+//            Excplicit GC
+//         */
+//        IJ.log("ran explicit GC: " + (System.nanoTime() - time) / 1000000 + " ms");
 
 //        IJ.log("Green ROI lLeft: " + Common.lLeft + ", lTop: " + Common.lTop + ", lWidth: " + Common.lWidth + ", lHeight: " + Common.lHeight);
 //        IJ.log("CCFx: " + Common.CCFdistX + ", CCFy: " + Common.CCFdistY + ", ShiftX: " + Common.ICCSShiftX + ", ShiftY: " + Common.ICCSShiftY);
@@ -123,7 +123,7 @@ public class JTESTPanelComponent extends JFrame {
     };
 
     ActionListener btnTest3Pressed = (ActionEvent event) -> {
-        cumulativePlotIntervalDialog();
+//        cumulativePlotIntervalDialog();
     };
 
     ActionListener btnTest2Pressed = (ActionEvent event) -> {
@@ -132,8 +132,8 @@ public class JTESTPanelComponent extends JFrame {
 
     ActionListener btnTestPressed = (ActionEvent event) -> {
 
-        IJ.log("in camera binning: " + Common.inCameraBinning);
-        IJ.log("pixel size = " + Common.pixelSize + ", magnification = " + Common.objMag + ", NA = " + Common.NA + ", Emission = " + Common.emlambda + ", PSF(xy) = " + Common.sigmaxy);
+//        IJ.log("in camera binning: " + Common.inCameraBinning);
+//        IJ.log("pixel size = " + Common.pixelSize + ", magnification = " + Common.objMag + ", NA = " + Common.NA + ", Emission = " + Common.emlambda + ", PSF(xy) = " + Common.sigmaxy);
 
 //        IJ.log("size_a: " + DirectCapturePanel.Common.size_a + ", size_b: " + DirectCapturePanel.Common.size_b);
 //        IJ.log("Ham READOUTSPEED: " + Common_Orca.readoutSpeed);

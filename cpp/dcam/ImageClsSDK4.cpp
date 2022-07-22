@@ -238,6 +238,72 @@ void ImageSDK4::setOutTrigger(int outTriggerKind, double outTrigDelay, double ou
 	}
 }
 
+void ImageSDK4::setReadoutSpeed(int rsIdx) {
+	readoutSpeedIdx_ = rsIdx;
+
+	if (readoutSpeedIdx_ == 0) {
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		//SLOWEST or Ultra-quiet; lower e- rms
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		err = dcamprop_setvalue(hdcam, DCAM_IDPROP_READOUTSPEED, DCAMPROP_READOUTSPEED__SLOWEST);
+		if (failed(err))
+		{
+			dcamcon_show_dcamerr(hdcam, err, "dcamprop_setvalue DCAMPROP_READOUTSPEED__SLOWEST");
+			assert((false) && "dcamprop_setvalue DCAMPROP_READOUTSPEED__SLOWEST");
+		}
+		return;
+	}
+
+	if (readoutSpeedIdx_ == 1) {
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		//FASTEST or Standard scan; higher e- rms
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		err = dcamprop_setvalue(hdcam, DCAM_IDPROP_READOUTSPEED, DCAMPROP_READOUTSPEED__FASTEST);
+		if (failed(err))
+		{
+			dcamcon_show_dcamerr(hdcam, err, "dcamprop_setvalue DCAMPROP_READOUTSPEED__FASTEST");
+			assert((false) && "dcamprop_setvalue DCAMPROP_READOUTSPEED__FASTEST");
+		}
+		return;
+	}
+
+	assert((false) && "Incorrect readoutSpeed Index passed");
+
+}
+
+void ImageSDK4::setSensorMode(int smIdx) {
+	sensorModeIdx_ = smIdx;
+
+	if (sensorModeIdx_ == 0) {
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		//Area
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		err = dcamprop_setvalue(hdcam, DCAM_IDPROP_SENSORMODE, DCAMPROP_SENSORMODE__AREA);
+		if (failed(err))
+		{
+			dcamcon_show_dcamerr(hdcam, err, "dcamprop_setvalue DCAMPROP_SENSORMODE__AREA");
+			assert((false) && "dcamprop_setvalue DCAMPROP_SENSORMODE__AREA");
+		}
+		return;
+	}
+
+	if (sensorModeIdx_ == 1) {
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		//Photon number resolving
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		err = dcamprop_setvalue(hdcam, DCAM_IDPROP_SENSORMODE, DCAMPROP_SENSORMODE__PHOTONNUMBERRESOLVING);
+		if (failed(err))
+		{
+			dcamcon_show_dcamerr(hdcam, err, "dcamprop_setvalue DCAMPROP_SENSORMODE__PHOTONNUMBERRESOLVING");
+			assert((false) && "dcamprop_setvalue DCAMPROP_SENSORMODE__PHOTONNUMBERRESOLVING");
+		}
+		return;
+	}
+
+	assert((false) && "Incorrect sensorMode Index passed");
+
+}
+
 void ImageSDK4::reset() {
 	isStopPressed_ = false;
 }

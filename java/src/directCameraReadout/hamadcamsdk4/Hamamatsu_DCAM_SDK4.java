@@ -1,5 +1,6 @@
 /*
- * SDK4 Version 20.12.6051, 20.12.6136
+ * SDK4 Version 20.12.6051, 20.12.6136, 22.2.6391
+ * Compiled with DCAMSDK4 v21066291
  * Link to dcam-api installer: https://dcam-api.com/downloads/
  * Tested on Orca Flash 4.0 v2 C11440-22C (SN 100261), Orca Flash 4.0 v2 C11440-22CU (SN 750941), Flash 4.0 v3 C13440-20CU (SN 300374), Flash 4.0 C13440-20C (Lucas Flatten), Quest C15550-20UP
 */
@@ -47,7 +48,7 @@ public class Hamamatsu_DCAM_SDK4 {
     // NOTE: 
     // VERSION of the used SDK4 library.
     // VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this VERSION num in Fiji.App > jars.
-    public static final String VERSION = "v1_1_4";
+    public static final String VERSION = "v1_1_5";
 
     private static void printlog(String msg) {
         if (false) {

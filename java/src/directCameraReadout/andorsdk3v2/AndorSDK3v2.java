@@ -46,7 +46,7 @@ public class AndorSDK3v2 {
     // NOTE: 
     // VERSION of the used SDK3 library.
     // VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this VERSION num in Fiji.App > jars.
-    public static final String VERSION = "v1_1_1";
+    public static final String VERSION = "v1_1_2";
 
     private static void printlogdll(String msg) {
         if (false) {

@@ -27,6 +27,12 @@ public:
 	double outTriggerDelay_;//s
 	double outTriggerPeriod_;//s
 
+	//readout speed
+	int readoutSpeedIdx_; //0-DCAMPROP_READOUTSPEED__SLOWEST; 1-DCAMPROP_READOUTSPEED__FASTEST
+
+	//sensor mode
+	int sensorModeIdx_; //0-DCAMPROP_SENSORMODE__AREA; 1-DCAMPROP_SENSORMODE__PHOTONNUMBERRESOLVING
+
 
 
 	//Timer
@@ -73,6 +79,12 @@ public:
 
 	//Set Programable OutputTrigger
 	void setOutTrigger(int outTriggerKind, double outTrigDelay, double outTrigPeriod);
+
+	//Set Readout Speed; Ultra-quiet or Standard scan (default)
+	void setReadoutSpeed(int readoutSpeedIdx);
+
+	//Set Sensor Mode; AREA (default) OR PHOTONNUMBERRESOLVING (only quest)
+	void setSensorMode(int sensorModeIdx);
 
 };
 

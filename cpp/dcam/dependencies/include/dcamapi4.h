@@ -1,6 +1,8 @@
 /* **************************************************************** *
 
-	dcamapi4.h:	Aug 4, 2020
+	dcamapi4.h:	Jun 18, 2021
+
+	Copyright (C) 2011 - 2021 Hamamatsu Photonics K.K.. All right reserved.
 
  * **************************************************************** */
 
@@ -117,11 +119,12 @@ DCAM_DECLARE_BEGIN( enum, DCAMERR )
 	DCAMERR_NOCOMBINATION		= 0x80000208,/*		no combination on registry	*/
 
 	DCAMERR_FAILOPEN			= 0x80001001,/* DEPRECATED */
+	DCAMERR_FRAMEGRABBER_NEEDS_FIRMWAREUPDATE = 0x80001002,/*	need to update frame grabber firmware to use the camera	*/
 	DCAMERR_INVALIDMODULE		= 0x80000211,/*		dcam_init() found invalid module	*/
 	DCAMERR_INVALIDCOMMPORT		= 0x80000212,/*		invalid serial port		*/
 	DCAMERR_FAILOPENBUS			= 0x81001001,/*		the bus or driver are not available	*/
 	DCAMERR_FAILOPENCAMERA		= 0x82001001,/*		 camera report error during opening	*/
-	DCAMERR_FRAMEGRABBER_NEEDS_FIRMWAREUPDATE = 0x80001002,/*	need to update frame grabber firmware to use the camera	*/
+	DCAMERR_DEVICEPROBLEM		= 0x82001002,/*		initialization failed(for maico)	*/
 
 	/* calling error */
 	DCAMERR_INVALIDCAMERA		= 0x80000806,/*		invalid camera			*/
@@ -205,6 +208,8 @@ DCAM_DECLARE_BEGIN( enum, DCAMERR )
 	DCAMERR_NOTIMPLEMENT		= 0x80000f02,/*		not yet implementation				*/
 
 	DCAMERR_DELAYEDFRAME = 0x80000f09,/*	the frame waiting re-load from hardware buffer with SNAPSHOT of DEVICEBUFFER MODE */
+
+	DCAMERR_DEVICEINITIALIZING	= 0xb0000001,
 
 	DCAMERR_APIINIT_INITOPTIONBYTES	= 0xa4010003,/*	DCAMAPI_INIT::initoptionbytes is invalid	*/
 	DCAMERR_APIINIT_INITOPTION		= 0xa4010004,/*	DCAMAPI_INIT::initoption is invalid	*/
@@ -367,6 +372,10 @@ DCAM_DECLARE_BEGIN( enum, DCAM_IDSTR )
 	DCAM_IDSTR_DRIVERVERSION			= 0x04000106,
 	DCAM_IDSTR_MODULEVERSION			= 0x04000107,
 	DCAM_IDSTR_DCAMAPIVERSION			= 0x04000108,
+	DCAM_IDSTR_SUBUNIT_INFO1			= 0x04000110,
+	DCAM_IDSTR_SUBUNIT_INFO2			= 0x04000111,
+	DCAM_IDSTR_SUBUNIT_INFO3			= 0x04000112,
+	DCAM_IDSTR_SUBUNIT_INFO4			= 0x04000113,
 
 	DCAM_IDSTR_CAMERA_SERIESNAME		= 0x0400012c,
 

@@ -32,7 +32,7 @@ TimeKeeper tk3;
 inline const int my_dcamdev_string(DCAMERR& err, HDCAM hdcam, int32 idStr, char* text, int32 textbytes);
 float* get_propertyattr_range(DCAMPROP_ATTR propattr);
 float* dcamcon_ret_propertyattr_range(int32 iProp);
-int setParameter(double exptime, int oW, int oH, int oL, int oT, int incamerabin, int acqmode, int totalframe, int size_b, int arraysize, int outTriggerKind, double outTrigDelay, double outTrigPeriod);
+int setParameter(double exptime, int oW, int oH, int oL, int oT, int incamerabin, int acqmode, int totalframe, int size_b, int arraysize, int outTriggerKind, double outTrigDelay, double outTrigPeriod, int readoutSpeedIdx, int sensorModeIdx);
 void run_acquisition(HDCAM hdcam, HDCAMWAIT hwait); //UNUSED
 void run_acquisition(HDCAM hdcam, HDCAMWAIT hwait, JNIEnv* _env, jshortArray _outArray);
 void sample_wait_single(HDCAM hdcam, HDCAMWAIT hwait);
@@ -82,7 +82,7 @@ float* dcamcon_ret_propertyattr_range(int32 iProp) {
 	}
 }
 
-int setParameter(double exptime, int oW, int oH, int oL, int oT, int incamerabin, int acqmode, int totalframe, int size_b, int arraysize, int outTriggerKind, double outTrigDelay, double outTrigPeriod) {
+int setParameter(double exptime, int oW, int oH, int oL, int oT, int incamerabin, int acqmode, int totalframe, int size_b, int arraysize, int outTriggerKind, double outTrigDelay, double outTrigPeriod, int readoutSpeedIdx, int sensorModeIdx) {
 	int iRet;
 	imgobj.reset();
 	imgobj.acqmode_ = acqmode;
@@ -111,6 +111,12 @@ int setParameter(double exptime, int oW, int oH, int oL, int oT, int incamerabin
 
 	//setOutputTrigger
 	imgobj.setOutTrigger(outTriggerKind, outTrigDelay, outTrigPeriod);
+
+	//setReadoutSpeed
+	imgobj.setReadoutSpeed(readoutSpeedIdx);
+
+	//setSensorMode
+	imgobj.setSensorMode(sensorModeIdx);
 
 	return iRet;
 }
@@ -634,11 +640,15 @@ JNIEXPORT jdouble JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1DCAM_
 	}
 	else if (name == "INTERNALLINESPEED") {
 		imgobj.err = dcamprop_getvalue(imgobj.hdcam, DCAM_IDPROP_INTERNALLINESPEED, &res);
-		assert((!failed(imgobj.err)) && "error dcamprop_getvalue DCAM_IDPROP_INTERNALLINESPEED");
+		if (failed(imgobj.err)) {
+			res = 0;
+		}
 	}
 	else if (name == "INTERNAL_LINEINTERVAL") {
 		imgobj.err = dcamprop_getvalue(imgobj.hdcam, DCAM_IDPROP_INTERNAL_LINEINTERVAL, &res);
-		assert((!failed(imgobj.err)) && "error dcamprop_getvalue DCAM_IDPROP_INTERNAL_LINEINTERVAL");
+		if (failed(imgobj.err)) {
+			res = 0;
+		}
 	}
 	else if (name == "TIMING_READOUTTIME") {
 		imgobj.err = dcamprop_getvalue(imgobj.hdcam, DCAM_IDPROP_TIMING_READOUTTIME, &res);
@@ -652,10 +662,17 @@ JNIEXPORT jdouble JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1DCAM_
 		imgobj.err = dcamprop_getvalue(imgobj.hdcam, DCAM_IDPROP_EXPOSURETIME, &res);
 		assert((!failed(imgobj.err)) && "error dcamprop_getvalue DCAM_IDPROP_EXPOSURETIME");
 	}
+	else if (name == "READOUTSPEED") {
+		imgobj.err = dcamprop_getvalue(imgobj.hdcam, DCAM_IDPROP_READOUTSPEED, &res);
+		assert((!failed(imgobj.err)) && "error dcamprop_getvalue DCAM_IDPROP_READOUTSPEED");
+	}
+	else if (name == "SENSORMODE") {
+		imgobj.err = dcamprop_getvalue(imgobj.hdcam, DCAM_IDPROP_SENSORMODE, &res);
+		assert((!failed(imgobj.err)) && "error dcamprop_getvalueDCAM_IDPROP_SENSORMODE");
+	}
 	else {
 		assert((false) && "GetDoubleSDK4 unmatched argument");
 	}
-
 
 	return res;
 
@@ -734,11 +751,12 @@ JNIEXPORT jfloatArray JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1D
 }
 
 
-JNIEXPORT jint JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1DCAM_1SDK4_setParameterSDK4(JNIEnv* env, jclass cls, jdouble exposureTime, jint Width, jint Height, jint Left, jint Top, jint Incamerabin, jint acqmode, jint totalframe, jint size_b, jint arraysize, jint ouTriggerKind, jdouble outDelay, jdouble outPeriod) {
+JNIEXPORT jint JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1DCAM_1SDK4_setParameterSDK4(JNIEnv* env, jclass cls, jdouble exposureTime, jint Width, jint Height, jint Left, jint Top, jint Incamerabin, jint acqmode, jint totalframe, jint size_b, jint arraysize, jint ouTriggerKind, jdouble outDelay, jdouble outPeriod, jint readoutSpeedIdx, jint sensorModeIdx) {
 	int iRet;
-	iRet = setParameter(exposureTime, Width, Height, Left, Top, Incamerabin, acqmode, totalframe, size_b, arraysize, ouTriggerKind, outDelay, outPeriod);
+	iRet = setParameter(exposureTime, Width, Height, Left, Top, Incamerabin, acqmode, totalframe, size_b, arraysize, ouTriggerKind, outDelay, outPeriod, readoutSpeedIdx, sensorModeIdx);
 	return iRet;
 }
+
 
 JNIEXPORT jdouble JNICALL Java_directCameraReadout_hamadcamsdk4_Hamamatsu_1DCAM_1SDK4_getKineticCycleSDK4(JNIEnv* env, jclass cls) {
 	return imgobj.getframerate();

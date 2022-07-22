@@ -39,7 +39,7 @@ public class GUI extends JFrame implements ActionListener {
 
         //---------------------GUI----------------------
         setSize(300, 400);//400, 585);
-        setTitle("Direct Camera Readoiut v 19/02/22");
+        setTitle("Just direct camera readout as of Imaging_FCS_1_612");
         setResizable(false);
         setLocation(0, (int) (Toolkit.getDefaultToolkit().getScreenSize().getHeight() / 2 - getHeight() / 2));
 
@@ -72,13 +72,13 @@ public class GUI extends JFrame implements ActionListener {
         sl_aboutPanel.putConstraint(SpringLayout.NORTH, aboutTxt, 5, SpringLayout.NORTH, aboutPanel);
         sl_aboutPanel.putConstraint(SpringLayout.WEST, aboutTxt, 5, SpringLayout.WEST, aboutPanel);
         sl_aboutPanel.putConstraint(SpringLayout.EAST, aboutTxt, -5, SpringLayout.EAST, aboutPanel);
-        aboutTxt.setText("Please refer to and cite:\n\nDYK Aik and Wohland T.\nMicroscope Alignment Using Real-Time\nImaging FCS.....\n\nDownloadable from:\nwww.");
+        aboutTxt.setText("If you found it useful please refer to and cite\n\nArticle: \nAik DYK, Wohland T.\nMicroscope alignment using real-time\nImaging FCS. (2022). 10.1016/j.bpj.2022.06.009.\n\nThis plugin: \nhttps://doi.org/10.5281/zenodo.6685875.\n\n");
         aboutTxt.setLineWrap(true);
         aboutTxt.setEditable(false);
         aboutTxt.setBackground(getBackground());
         aboutPanel.add(aboutTxt);
 
-        linkBtn = new JButton("Go to BPJ");
+        linkBtn = new JButton("Go to article");
         sl_aboutPanel.putConstraint(SpringLayout.NORTH, linkBtn, 5, SpringLayout.SOUTH, aboutTxt);
         sl_aboutPanel.putConstraint(SpringLayout.WEST, linkBtn, 25, SpringLayout.WEST, aboutPanel);
         sl_aboutPanel.putConstraint(SpringLayout.EAST, linkBtn, -25, SpringLayout.EAST, aboutPanel);
@@ -162,14 +162,15 @@ public class GUI extends JFrame implements ActionListener {
         Object origin = arg0.getSource();
         if (origin == linkBtn) {
             try {
-                BrowserLauncher.openURL("https://www.google.com");
+                BrowserLauncher.openURL("https://doi.org/10.1016/j.bpj.2022.06.009");
             } catch (IOException ie) {
             }
         }
 
         if (origin == startBtn) {
+
             if (dcrobj == null) {
-                dcrobj = new DirectCapture(isgpupresent);
+                return;
             }
             //check if computer running Windows OS
             boolean proceed = true;
@@ -183,6 +184,7 @@ public class GUI extends JFrame implements ActionListener {
             } else {
                 IJ.showMessage("Direct Capture only supported in Windows");
             }
+
         }
     }
 
