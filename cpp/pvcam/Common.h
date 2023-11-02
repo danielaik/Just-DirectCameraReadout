@@ -15,6 +15,7 @@
 #include <master.h>
 #include <pvcam.h>
 
+
 // The code returned when application exits on error
 #define APP_EXIT_ERROR 1
 

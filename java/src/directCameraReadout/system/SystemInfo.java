@@ -1,22 +1,30 @@
 package directCameraReadout.system;
 
-import ij.IJ;
 import directCameraReadout.gui.DirectCapturePanel.Common;
+import ij.IJ;
 
 public class SystemInfo {
 
-    private final Runtime runtime = Runtime.getRuntime();       // Program currently runs on one JVM/machine
+    public static long totalDesignatedMemory() {
+        return IJ.maxMemory();
+//        return Runtime.getRuntime().maxMemory();
+    }
 
-    public long totalMem() {
+    public static long currentAllocatedFreeMemory() {
+        return Runtime.getRuntime().freeMemory();
+    }
+
+    public static long totalAllocatedMemory() {
         return Runtime.getRuntime().totalMemory();
     }
 
-    public long usedMem() {
-        return Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+    public static long usedMemory() {
+        return (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
     }
 
-    public long freeMem() {
-        return Runtime.getRuntime().freeMemory();
+    public static long totalFreeMemory() {
+        return (IJ.maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()));
+//        return (Runtime.getRuntime().maxMemory() - (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()));
     }
 
     public static void explicitGC() {

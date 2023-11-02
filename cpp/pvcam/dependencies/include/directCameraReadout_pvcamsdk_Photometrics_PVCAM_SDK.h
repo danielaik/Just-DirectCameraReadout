@@ -78,10 +78,10 @@ JNIEXPORT jintArray JNICALL Java_directCameraReadout_pvcamsdk_Photometrics_1PVCA
 /*
  * Class:     directCameraReadout_pvcamsdk_Photometrics_PVCAM_SDK
  * Method:    setParameterPVCAM
- * Signature: (DIIIIIIIII)I
+ * Signature: (DIIIIIIIIIII)I
  */
 JNIEXPORT jint JNICALL Java_directCameraReadout_pvcamsdk_Photometrics_1PVCAM_1SDK_setParameterPVCAM
-  (JNIEnv *, jclass, jdouble, jint, jint, jint, jint, jint, jint, jint, jint, jint);
+  (JNIEnv *, jclass, jdouble, jint, jint, jint, jint, jint, jint, jint, jint, jint, jint, jint);
 
 /*
  * Class:     directCameraReadout_pvcamsdk_Photometrics_PVCAM_SDK
@@ -138,6 +138,30 @@ JNIEXPORT jint JNICALL Java_directCameraReadout_pvcamsdk_Photometrics_1PVCAM_1SD
  */
 JNIEXPORT jdouble JNICALL Java_directCameraReadout_pvcamsdk_Photometrics_1PVCAM_1SDK_getDoubleValuePVCAM
   (JNIEnv *, jclass, jstring);
+
+/*
+ * Class:     directCameraReadout_pvcamsdk_Photometrics_PVCAM_SDK
+ * Method:    getPortSize
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_directCameraReadout_pvcamsdk_Photometrics_1PVCAM_1SDK_getPortSize
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     directCameraReadout_pvcamsdk_Photometrics_PVCAM_SDK
+ * Method:    getSpeedCount
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_directCameraReadout_pvcamsdk_Photometrics_1PVCAM_1SDK_getSpeedCount
+  (JNIEnv *, jclass, jint);
+
+/*
+ * Class:     directCameraReadout_pvcamsdk_Photometrics_PVCAM_SDK
+ * Method:    setPortAndSpeedPair
+ * Signature: (II)V
+ */
+JNIEXPORT void JNICALL Java_directCameraReadout_pvcamsdk_Photometrics_1PVCAM_1SDK_setPortAndSpeedPair
+  (JNIEnv *, jclass, jint, jint);
 
 #ifdef __cplusplus
 }

@@ -31,7 +31,7 @@ import directCameraReadout.control.FrameCounter;
 import directCameraReadout.control.FrameCounterX;
 import directCameraReadout.gui.DirectCapturePanel;
 import directCameraReadout.gui.DirectCapturePanel.Common;
-import directCameraReadout.gui.DirectCapturePanel.Common_SONA;
+import directCameraReadout.gui.cameraConstant.Common_SONA;
 import directCameraReadout.workers.Workers.*;
 import static directCameraReadout.workers.Workers.LiveVideoWorkerV2Instant;
 import static directCameraReadout.workers.Workers.SynchronizerWorkerInstant;
@@ -40,14 +40,15 @@ import static directCameraReadout.workers.Workers.BufferToStackWorkerInstant;
 import static directCameraReadout.workers.Workers.CumulativeACFWorkerV3Instant;
 import static directCameraReadout.workers.Workers.ICCSWorkerInstant;
 import static directCameraReadout.workers.Workers.NonCumulativeACFWorkerV3Instant;
+import static version.VERSION.DCR_VERSION;
+import static version.VERSION.SDK3_VERSION;
 
 public class AndorSDK3v2 {
 
     // NOTE: 
-    // VERSION of the used SDK3 library.
-    // VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this VERSION num in Fiji.App > jars.
-    public static final String VERSION = "v1_1_2";
-
+    // DCR_VERSION of the used SDK3 library.
+    // DCR_VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this DCR_VERSION num in Fiji.App > jars.
+//    public static final String SDK3_VERSION = "v1_1_2";
     private static void printlogdll(String msg) {
         if (false) {
             IJ.log(msg);
@@ -191,7 +192,7 @@ public class AndorSDK3v2 {
                     tempdir.mkdir();
                 }
 
-                File liveReadoutSDK3_dir = new File(tempdir.toString() + "/" + VERSION);
+                File liveReadoutSDK3_dir = new File(tempdir.toString() + "/" + SDK3_VERSION);
                 libDirPath = liveReadoutSDK3_dir.toString();
 
                 boolean Write_Atmcd = IsWindows; //sdk3
@@ -483,7 +484,21 @@ public class AndorSDK3v2 {
     }
 
     // Working Version (single capture mode)
-    public static void runThread_singlecapture() {
+    public static void runThread_singlecapture(boolean isFF) {
+
+        if (isFF) {
+            //Recall previous ROI setting
+            Common.mem_oWidth = Common.oWidth;
+            Common.mem_oHeight = Common.oHeight;
+            Common.mem_oLeft = Common.oLeft;
+            Common.mem_oTop = Common.oTop;
+
+            //Set setting for maximum coverage before capturing a single image for display
+            Common.oWidth = Common.MAXpixelwidth / Common.inCameraBinning;
+            Common.oHeight = Common.MAXpixelheight / Common.inCameraBinning;
+            Common.oLeft = 1;
+            Common.oTop = 1;
+        }
 
         SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override
@@ -506,55 +521,70 @@ public class AndorSDK3v2 {
                     DirectCapturePanel.DisplayImageObj.updateImage(tempIntArray, Common.inCameraBinning, Common.MAXpixelwidth, Common.MAXpixelheight, Common.isCropMode);
                 }
 
-                boolean alteredDim = false;
-                if (Common.ip != null) {
-                    alteredDim = (Common.ip.getHeight() * Common.ip.getWidth()) != Common.arraysingleS.length;
-                }
-
-                if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
-                    Common.ip = new ShortProcessor(Common.oWidth, Common.oHeight);
-                }
-
-                for (int y = 0; y < Common.oHeight; y++) {
-                    for (int x = 0; x < Common.oWidth; x++) {
-                        int index = (y * Common.oWidth) + x;
-                        Common.ip.putPixel(x, y, (int) Common.arraysingleS[index]);
+                if (!isFF) {// display extra images onto Fiji
+                    boolean alteredDim = false;
+                    if (Common.ip != null) {
+                        alteredDim = (Common.ip.getHeight() * Common.ip.getWidth()) != Common.arraysingleS.length;
                     }
-                }
 
-                if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
-                    if (Common.impwin != null) {
-                        Common.impwin.close();
+                    if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
+                        Common.ip = new ShortProcessor(Common.oWidth, Common.oHeight);
                     }
-                    Common.imp = new ImagePlus("Single Scan", Common.ip);
-                    Common.imp.show();
 
-                    Common.impwin = Common.imp.getWindow();
-                    Common.impcan = Common.imp.getCanvas();
-                    Common.impwin.setLocation(impwinposx, impwinposy);
+                    for (int y = 0; y < Common.oHeight; y++) {
+                        for (int x = 0; x < Common.oWidth; x++) {
+                            int index = (y * Common.oWidth) + x;
+                            Common.ip.putPixel(x, y, (int) Common.arraysingleS[index]);
+                        }
+                    }
 
-                    //enlarge image to see better pixels
-                    if (Common.oWidth >= Common.oHeight) {
-                        Common.scimp = Common.zoomFactor / Common.oWidth; //adjustable: zoomFactor is by default 250 (see parameter definitions), a value chosen as it produces a good size on the screen
+                    if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
+                        if (Common.impwin != null) {
+                            Common.impwin.close();
+                        }
+                        Common.imp = new ImagePlus("Single Scan", Common.ip);
+                        Common.imp.show();
+
+                        Common.impwin = Common.imp.getWindow();
+                        Common.impcan = Common.imp.getCanvas();
+                        Common.impwin.setLocation(impwinposx, impwinposy);
+
+                        //enlarge image to see better pixels
+                        if (Common.oWidth >= Common.oHeight) {
+                            Common.scimp = Common.zoomFactor / Common.oWidth; //adjustable: zoomFactor is by default 250 (see parameter definitions), a value chosen as it produces a good size on the screen
+                        } else {
+                            Common.scimp = Common.zoomFactor / Common.oHeight;
+                        }
+                        if (Common.scimp < 1.0) {
+                            Common.scimp = 1.0;
+                        }
+                        Common.scimp *= 100;// transfrom this into %tage to run ImageJ command
+                        IJ.run(Common.imp, "Original Scale", "");
+                        IJ.run(Common.imp, "Set... ", "zoom=" + Common.scimp + " x=" + (int) Math.floor(Common.oWidth / 2) + " y=" + (int) Math.floor(Common.oHeight / 2));
+                        IJ.run("In [+]", ""); 	// This needs to be used since ImageJ 1.48v to set the window to the right size; 
+                        // this might be a bug and is an ad hoc solution for the moment; before only the "Set" command was necessary
+
+                        Common.impcan.setFocusable(true);
                     } else {
-                        Common.scimp = Common.zoomFactor / Common.oHeight;
+                        //(Common.impwin != null && Common.imp != null) && !Common.impwin.isClosed()
+                        Common.ip.resetMinAndMax();
+                        Common.imp.updateAndDraw();
                     }
-                    if (Common.scimp < 1.0) {
-                        Common.scimp = 1.0;
-                    }
-                    Common.scimp *= 100;// transfrom this into %tage to run ImageJ command
-                    IJ.run(Common.imp, "Original Scale", "");
-                    IJ.run(Common.imp, "Set... ", "zoom=" + Common.scimp + " x=" + (int) Math.floor(Common.oWidth / 2) + " y=" + (int) Math.floor(Common.oHeight / 2));
-                    IJ.run("In [+]", ""); 	// This needs to be used since ImageJ 1.48v to set the window to the right size; 
-                    // this might be a bug and is an ad hoc solution for the moment; before only the "Set" command was necessary
-
-                    Common.impcan.setFocusable(true);
-                } else {
-                    //(Common.impwin != null && Common.imp != null) && !Common.impwin.isClosed()
-                    Common.ip.resetMinAndMax();
-                    Common.imp.updateAndDraw();
                 }
+
                 return null;
+            }
+
+            @Override
+            protected void done() {
+
+                //Reset previos setting
+                if (isFF) {
+                    Common.oWidth = Common.mem_oWidth;
+                    Common.oHeight = Common.mem_oHeight;
+                    Common.oLeft = Common.mem_oLeft;
+                    Common.oTop = Common.mem_oTop;
+                }
             }
         };
         worker.execute();
@@ -682,7 +712,7 @@ public class AndorSDK3v2 {
             protected Void doInBackground() throws Exception {
                 Thread.currentThread().setName("runThread_noncumulativeV3");
 
-                final int noThread = 4; // number of working threads  //5
+                final int noThread = 5; // number of working threads  
                 final int fbuffersize = Common.size_a * Common.size_b; // number of frame
 
                 // Control flow reset, buffer reset
@@ -708,12 +738,14 @@ public class AndorSDK3v2 {
                 LiveVideoWorkerV3Instant = new LiveVideoWorkerV3(Common.tempWidth, Common.tempHeight, latch);
                 BufferToStackWorkerInstant = new BufferToStackWorker(Common.tempWidth, Common.tempHeight, Common.totalFrame, latch, Common.arraysize);
                 CumulativeACFWorkerV3Instant = new CumulativeACFWorkerV3(latch);
+                NonCumulativeACFWorkerV3Instant = new NonCumulativeACFWorkerV3(Common.tempWidth, Common.tempHeight, latch, Common.arraysize);
 
                 long timeelapse = System.nanoTime();
                 CppToJavaTransferWorkerEXTENDEDV2Instant.execute();
                 LiveVideoWorkerV3Instant.execute();
                 BufferToStackWorkerInstant.execute();
                 CumulativeACFWorkerV3Instant.execute();
+                NonCumulativeACFWorkerV3Instant.execute();
 
                 latch.await();
                 System.out.println("***Acquisition V3***");
@@ -728,6 +760,8 @@ public class AndorSDK3v2 {
                 DirectCapturePanel.tbStartStop.setSelected(false);
                 DirectCapturePanel.tfTotalFrame.setEditable(true);
                 DirectCapturePanel.tfExposureTime.setEditable(true);
+                Common.fitStartCumulative = 1;
+                DirectCapturePanel.tfCumulativeFitStart.setText(Integer.toString(Common.fitStartCumulative));
                 System.out.println("Native counter cpp: " + Common.framecounter.getCounter() + ", time overall: " + Common.framecounter.time1 + ", time average readbuffer combin: " + Common.framecounter.time2 + ", time JNI copy: " + Common.framecounter.time3 + ", JNI transfer: " + (Common.tempWidth * Common.tempHeight * 2 / Common.framecounter.time3) + " MBps, fps(cap): " + (1 / Common.framecounter.time3) + "Common.framecounterIMSX: " + Common.framecounterIMSX.getCount());
                 System.out.println("***");
                 System.out.println("");
@@ -954,8 +988,8 @@ public class AndorSDK3v2 {
         metadatavalue[t++] = GetStringValueSDK3("InterfaceType");
         metadatavalue[t++] = GetEnumeratedStringSDK3("TriggerSource");
         metadatavalue[t++] = GetEnumeratedStringSDK3("AuxiliaryOutSource");
-        metadatavalue[t++] = "DirectCameraReadout_" + directCameraReadout.gui.DirectCapturePanel.VERSION;
-        metadatavalue[t++] = "SDK_" + VERSION;
+        metadatavalue[t++] = "DirectCameraReadout_" + DCR_VERSION;
+        metadatavalue[t++] = "SDK_" + SDK3_VERSION;
         Date date = new Date();
         long time = date.getTime();
         Timestamp ts = new Timestamp(time);

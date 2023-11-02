@@ -1,7 +1,7 @@
 package directCameraReadout.util;
 
-import ij.IJ;
 import directCameraReadout.gui.DirectCapturePanel;
+import directCameraReadout.system.SystemInfo;
 
 public class Utilities {
 
@@ -28,22 +28,8 @@ public class Utilities {
 
     public static boolean setSizeRandSizeC(int f, int w, int h) {
 
-        /* -Xmx30720m = 30595MB available
-    short[][]                                   int[][]
-    1/300_000_000 = 24ms/600MB                  195ms/1200MB
-    5/300_000_000 =  822ms/3GB                   959ms/6000MB
-    10/300_000_000 = 1780ms/6GB                   1900ms/12GB
-    15/300_000_000 = 2755ms/9GB                    2807ms/18GB
-    20/300_000_000 = 3866ms/12GB                   3818ms/24GB
-    25/300_000_000 = 4812ms/15GB                    4917ms/30GB
-    30/300_000_000 = 5951ms/18GB                 Out of memory
-    
-         */
-//        IJ.log("Total memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.totalMem() / 1000000 + " MB");
-//        IJ.log("Used memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.usedMem() / 1000000 + " MB");
-//        IJ.log("Free memory: " + directCameraReadout.gui.DirectCapturePanel.sysinfo.freeMem() / 1000000 + " MB");
-
-        long availmem = DirectCapturePanel.sysinfo.totalMem(); //byte
+//        long availmem = SystemInfo.totalAllocatedMemory(); //byte
+        long availmem = SystemInfo.totalDesignatedMemory(); //byte
 
         long byteperpix = 2;//currently short //TODO: change this when implenting int[]
         double overhead = 0.7;  //TODO: find out a better way to profile
@@ -73,6 +59,7 @@ public class Utilities {
     }
 
     public static int retMaxAllowablePlotInterval(int sizeA, int sizeB) {
+
         return (int) Math.floor(sizeA * sizeB / 1.5);
     }
 

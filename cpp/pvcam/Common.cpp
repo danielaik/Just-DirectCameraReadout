@@ -315,13 +315,17 @@ bool OpenCamera()
     NVPC ports;
     if (!ReadEnumeration(&ports, PARAM_READOUT_PORT, "PARAM_READOUT_PORT"))
         return false;
-
+    
     if (!IsParamAvailable(PARAM_SPDTAB_INDEX, "PARAM_SPDTAB_INDEX"))
         return false;
+
     if (!IsParamAvailable(PARAM_PIX_TIME, "PARAM_PIX_TIME"))
         return false;
+
     if (!IsParamAvailable(PARAM_BIT_DEPTH, "PARAM_BIT_DEPTH"))
         return false;
+    
+
 
     // Iterate through available ports and their speeds
     for (size_t pi = 0; pi < ports.size(); pi++)

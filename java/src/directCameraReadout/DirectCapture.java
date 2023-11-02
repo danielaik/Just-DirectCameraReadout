@@ -1,7 +1,7 @@
 /*
  *  Supported camera
  *  1) Andor iXon "DU860_BV" "DU888_BV" "DU897_BV", Sona "SONA-4BV11"  
- *  2) Photometrics "EVOLVE- 512" "GS144BSI"
+ *  2) Photometrics "EVOLVE- 512" "GS144BSI" "TMP-Kinetix"
  *  3) Hamamatsu Orca Flash 4.0 "C11440-22CU" "C11440-22C" "C13440-20CU" "C13440-20C" "C15550-20UP"
  */
 package directCameraReadout;
@@ -10,6 +10,7 @@ import directCameraReadout.gui.DirectCapturePanel;
 import directCameraReadout.gui.DirectCapturePanel.Common;
 import directCameraReadout.andorsdk2v3.AndorSDK2v3;
 import directCameraReadout.andorsdk3v2.AndorSDK3v2;
+import directCameraReadout.gui.cameraConstant.*;
 import directCameraReadout.hamadcamsdk4.Hamamatsu_DCAM_SDK4;
 import directCameraReadout.pvcamsdk.Photometrics_PVCAM_SDK;
 import ij.IJ;
@@ -23,6 +24,7 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
+import static version.VERSION.*;
 
 public class DirectCapture {
 
@@ -69,11 +71,11 @@ public class DirectCapture {
 
     public DirectCapture(int isgpupresent) {
         this.isgpupresent = isgpupresent;
-        System.out.println("Direct Camera Readout: " + DirectCapturePanel.VERSION);
-        System.out.println("SDK2: " + AndorSDK2v3.VERSION + " loaded " + AndorSDK2v3.isSDKload());
-        System.out.println("SDK3: " + AndorSDK3v2.VERSION + " loaded " + AndorSDK3v2.isSDKload());
-        System.out.println("SDK4: " + Hamamatsu_DCAM_SDK4.VERSION + " loaded " + Hamamatsu_DCAM_SDK4.isSDKload());
-        System.out.println("PVCAM: " + Photometrics_PVCAM_SDK.VERSION + " loaded " + Photometrics_PVCAM_SDK.isSDKload());
+        System.out.println("Direct Camera Readout: " + DCR_VERSION);
+        System.out.println("SDK2: " + SDK2_VERSION + " loaded " + AndorSDK2v3.isSDKload());
+        System.out.println("SDK3: " + SDK3_VERSION + " loaded " + AndorSDK3v2.isSDKload());
+        System.out.println("SDK4: " + HAMASDK_VERSION + " loaded " + Hamamatsu_DCAM_SDK4.isSDKload());
+        System.out.println("PVCAM: " + PVCAMSDK4_VERSION + " loaded " + Photometrics_PVCAM_SDK.isSDKload());
     }
 
     private void TRYonecamera() {
@@ -98,7 +100,7 @@ public class DirectCapture {
                             Common.isShutSystemPressed = false;
                             isEMCCDpreviouslyConnected = true;
                             AndorSDK2v3.InitializeEMCCDSDK2();
-                            AndorSDK2v3.SetTemperatureSDK2(DirectCapturePanel.Common_iXon860.defaultTemp);
+                            AndorSDK2v3.SetTemperatureSDK2(Common_iXon860.defaultTemp);
                             AndorSDK2v3.SetFanModeSDK2(0); //Setting to full by default
                             Common.$serialNumber = Integer.toString(AndorSDK2v3.getCameraSerialNumSDK2());
                             Common.$cameraHeadModel = AndorSDK2v3.getHeadModelSDK2();
@@ -124,7 +126,7 @@ public class DirectCapture {
                             Common.isShutSystemPressed = false;
                             isEMCCDpreviouslyConnected = true;
                             AndorSDK2v3.InitializeEMCCDSDK2();
-                            AndorSDK2v3.SetTemperatureSDK2(DirectCapturePanel.Common_iXon888.defaultTemp);
+                            AndorSDK2v3.SetTemperatureSDK2(Common_iXon888.defaultTemp);
                             AndorSDK2v3.SetFanModeSDK2(0); //Setting to full by default
                             Common.$serialNumber = Integer.toString(AndorSDK2v3.getCameraSerialNumSDK2());
                             Common.$cameraHeadModel = AndorSDK2v3.getHeadModelSDK2();
@@ -150,7 +152,7 @@ public class DirectCapture {
                             Common.isShutSystemPressed = false;
                             isEMCCDpreviouslyConnected = true;
                             AndorSDK2v3.InitializeEMCCDSDK2();
-                            AndorSDK2v3.SetTemperatureSDK2(DirectCapturePanel.Common_iXon897.defaultTemp);
+                            AndorSDK2v3.SetTemperatureSDK2(Common_iXon897.defaultTemp);
                             AndorSDK2v3.SetFanModeSDK2(0); //Setting to full by default
                             Common.$serialNumber = Integer.toString(AndorSDK2v3.getCameraSerialNumSDK2());
                             Common.$cameraHeadModel = AndorSDK2v3.getHeadModelSDK2();
@@ -211,6 +213,7 @@ public class DirectCapture {
 
                     case "EVOLVE- 512":
                     case "GS144BSI":
+                    case "TMP-Kinetix":
                         if (isPHOTOMETRICSpreviouslyConnected) {
                             IJ.showMessage("program is already running Photometrics Evolve");
                             break;
@@ -285,7 +288,7 @@ public class DirectCapture {
                     Common.isShutSystemPressed = false;
                     isEMCCDpreviouslyConnected = true;
                     AndorSDK2v3.InitializeEMCCDSDK2();
-                    AndorSDK2v3.SetTemperatureSDK2(DirectCapturePanel.Common_iXon860.defaultTemp);
+                    AndorSDK2v3.SetTemperatureSDK2(Common_iXon860.defaultTemp);
                     AndorSDK2v3.SetFanModeSDK2(0); //Setting to full by default
                     Common.$serialNumber = Integer.toString(AndorSDK2v3.getCameraSerialNumSDK2());
                     Common.$cameraHeadModel = AndorSDK2v3.getHeadModelSDK2();
@@ -309,7 +312,7 @@ public class DirectCapture {
                     Common.isShutSystemPressed = false;
                     isEMCCDpreviouslyConnected = true;
                     AndorSDK2v3.InitializeEMCCDSDK2();
-                    AndorSDK2v3.SetTemperatureSDK2(DirectCapturePanel.Common_iXon888.defaultTemp);
+                    AndorSDK2v3.SetTemperatureSDK2(Common_iXon888.defaultTemp);
                     AndorSDK2v3.SetFanModeSDK2(0); //Setting to full by default
                     Common.$serialNumber = Integer.toString(AndorSDK2v3.getCameraSerialNumSDK2());
                     Common.$cameraHeadModel = AndorSDK2v3.getHeadModelSDK2();
@@ -333,7 +336,7 @@ public class DirectCapture {
                     Common.isShutSystemPressed = false;
                     isEMCCDpreviouslyConnected = true;
                     AndorSDK2v3.InitializeEMCCDSDK2();
-                    AndorSDK2v3.SetTemperatureSDK2(DirectCapturePanel.Common_iXon897.defaultTemp);
+                    AndorSDK2v3.SetTemperatureSDK2(Common_iXon897.defaultTemp);
                     AndorSDK2v3.SetFanModeSDK2(0); //Setting to full by default
                     Common.$serialNumber = Integer.toString(AndorSDK2v3.getCameraSerialNumSDK2());
                     Common.$cameraHeadModel = AndorSDK2v3.getHeadModelSDK2();
@@ -456,7 +459,6 @@ public class DirectCapture {
                 }
             }
         }
-        
 
         if (UserSelectedCameraModel == "EVOLVE- 512") {
 
@@ -478,6 +480,25 @@ public class DirectCapture {
         }
 
         if (UserSelectedCameraModel == "GS144BSI") {
+
+            if (isPHOTOMETRICSpreviouslyConnected) {
+                IJ.showMessage("program is already running Photometrics camera");
+            } else {
+                isPHOTOMETRICSconnected = (PVCAMInitializationErrorCode == 0);
+                if (isPHOTOMETRICSconnected) {
+                    Common.isShutSystemPressed = false;
+                    isPHOTOMETRICSpreviouslyConnected = true;
+                    Photometrics_PVCAM_SDK.InitializePVCAM();
+                    Common.$serialNumber = Photometrics_PVCAM_SDK.GetCameraNamePVCAM();
+                    Common.$cameraHeadModel = Photometrics_PVCAM_SDK.GetModelPVCAM();
+                    ORpanelobj = new DirectCapturePanel().new ORpanel(CameraType[3]);
+                    DirectCapturePanel.JDirectCapturepanelComponentPanel.setVisible(true);
+                    Common.isgpupresent = isgpupresent;
+                }
+            }
+        }
+
+        if (UserSelectedCameraModel == "TMP-Kinetix") {
 
             if (isPHOTOMETRICSpreviouslyConnected) {
                 IJ.showMessage("program is already running Photometrics camera");
@@ -531,7 +552,9 @@ public class DirectCapture {
         if (full.contains("GS144BSI")) {
             return "GS144BSI";
         }
-
+        if (full.contains("TMP-Kinetix")) {
+            return "TMP-Kinetix";
+        }
         return "none";
     }
 

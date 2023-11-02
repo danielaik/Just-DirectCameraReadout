@@ -20,8 +20,20 @@ import javax.swing.SwingWorker;
 import directCameraReadout.gui.DirectCapturePanel;
 import directCameraReadout.gui.DirectCapturePanel.Common;
 import directCameraReadout.fcs.ImFCSCorrelator;
+import static directCameraReadout.gui.DirectCapturePanel.Common.selected_livevideo_binningMode;
+import static directCameraReadout.gui.DirectCapturePanel.DisplayImageObj;
 
 import static directCameraReadout.gui.DirectCapturePanel.iccsObj1;
+import directCameraReadout.gui.parameterName;
+import directCameraReadout.gui.parameterName.liveVideoBinMode.liveVideoBinModeEnum;
+import directCameraReadout.gui.parameterName.mode.modeEnum;
+
+import static directCameraReadout.gui.parameterName.modeType.$amode;
+import ij.WindowManager;
+import java.awt.Frame;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import javax.swing.JOptionPane;
 
 public class Workers {
 
@@ -59,6 +71,8 @@ public class Workers {
         int sleepTime;
         final int impwinposx = 1110;
         final int impwinposy = 125;
+        String $impLiveVideo;
+        boolean imagewindowready;
 
         public LiveVideoWorkerV2(int width, int height, CountDownLatch latch) {
             this.width = width;
@@ -80,6 +94,7 @@ public class Workers {
                 Common.lHeight = 6;
             }
             isSettingDynamicRange = true; //wheter to reset dynamic range every single frame; Setting to true might causes suddent flash when there is sudden change in max or min counts; setting to false allow user to use built in Fiji brightness tool
+            imagewindowready = false;
             sleepTime = optimalLiveVideoSleepTime(Common.fps, Common.kineticCycleTime, Common.transferFrameInterval);
         }
 
@@ -108,7 +123,7 @@ public class Workers {
                 AOIsparam = DirectCapturePanel.getRoiCoordinateFromCenter(initposx + 1, initposy + 1, Common.lWidth, Common.lHeight, Common.imp.getWidth(), Common.imp.getHeight()); //TODO add real width and height for acquisition
 
                 // checker if selected ROI is valid for PCC mode
-                if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {
+                if (Common.analysisMode.equals($amode[3])) {//Iccs
                     if ((AOIsparam[0] - 1 + Common.CCFdistX + Common.ICCSShiftX + Common.BinXSoft) > Common.oWidth || (AOIsparam[0] - 1 + Common.CCFdistX - Common.ICCSShiftX) < 0 || (AOIsparam[2] - 1 + Common.CCFdistY + Common.ICCSShiftY + Common.BinYSoft) > Common.oHeight || (AOIsparam[2] - 1 + Common.CCFdistY - Common.ICCSShiftY) < 0 || AOIsparam[0] - 1 + Common.BinXSoft > Common.oWidth || AOIsparam[2] - 1 + Common.BinYSoft > Common.oHeight) {
 
                         if (Common.isCCFmode) {
@@ -160,7 +175,7 @@ public class Workers {
                     Common.isResetCalibPlot = true;
                 }
 
-                if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {
+                if (Common.analysisMode.equals(parameterName.modeType.$amode[3])) {//Iccs
                     DirectCapturePanel.tfICCSRoi1Coord.setText(Integer.toString(Common.lWidth) + " / " + Integer.toString(Common.lHeight) + " / " + Integer.toString(Common.lLeft) + " / " + Integer.toString(Common.lTop));
                 }
 
@@ -193,7 +208,7 @@ public class Workers {
                     templh = (int) rect.getHeight();
 
                     // checker if selected ROI is valid for PCC mode
-                    if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {// == $mode[4]
+                    if (Common.analysisMode.equals($amode[3])) {// Iccs
                         if ((templleft - 1 + Common.CCFdistX + Common.ICCSShiftX + templw) > Common.oWidth || (templleft - 1 + Common.CCFdistX - Common.ICCSShiftX) < 0 || (templtop - 1 + Common.CCFdistY + Common.ICCSShiftY + templh) > Common.oHeight || (templtop - 1 + Common.CCFdistY - Common.ICCSShiftY) < 0 || templleft - 1 + templw > Common.oWidth || templtop - 1 + templh > Common.oHeight) {
 
                             if (Common.isCCFmode) {
@@ -255,7 +270,7 @@ public class Workers {
                     Common.isResetCalibPlot = true;
                 }
 
-                if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {
+                if (Common.analysisMode.equals($amode[3])) {//Iccs
                     DirectCapturePanel.tfICCSRoi1Coord.setText(Integer.toString(Common.lWidth) + " / " + Integer.toString(Common.lHeight) + " / " + Integer.toString(Common.lLeft) + " / " + Integer.toString(Common.lTop));
                 }
 
@@ -283,7 +298,7 @@ public class Workers {
 
         private void settingLiveImage() {
             Common.ip = new ShortProcessor(width, height);
-            Common.imp = new ImagePlus("Live", Common.ip);
+            Common.imp = new ImagePlus("Live image", Common.ip);
             if (Common.impwin != null) {
                 Common.impwin.close();
             }
@@ -292,6 +307,10 @@ public class Workers {
             Common.impwin = Common.imp.getWindow();
             Common.impcan = Common.imp.getCanvas();
             Common.impcan.setFocusable(true);
+            $impLiveVideo = Common.imp.getTitle();
+
+            //prevent minimize and exit of image window
+            Common.impwin.addWindowListener(getWindowAdapter());
 
             if (Common.showLiveVideoCumul) {
                 Common.impwin.setVisible(true);
@@ -317,8 +336,8 @@ public class Workers {
             IJ.run("In [+]", ""); 	// This needs to be used since ImageJ 1.48v to set the window to the right size; 
             // this might be a bug and is an ad hoc solution for the moment; before only the "Set" command was necessary
 
-            //setting default ROI selector for live display
-            if (Common.$selectedMode.equals(DirectCapturePanel.$mode[2]) || Common.$selectedMode.equals(DirectCapturePanel.$mode[3])) {
+            //setting default ROI selector for live display 
+            if (Common.selectedMode == modeEnum.CALIBRATION || Common.selectedMode == modeEnum.ACQUISITION) {
                 Common.impRoiLive = new Roi(Common.lLeft - 1, Common.lTop - 1, Common.lWidth, Common.lHeight);
                 Common.impRoiLive.setStrokeColor(Color.GREEN);
                 Common.imp.setRoi(Common.impRoiLive);
@@ -331,6 +350,33 @@ public class Workers {
             }
 
             Common.impcan.addMouseListener(impcanLiveMouseUsed);
+            imagewindowready = true;
+        }
+
+        private WindowAdapter getWindowAdapter() {
+            return new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent we) {//overrode to show message
+                    try {
+                        imagewindowready = false;
+                        settingLiveImage();
+                    } catch (Exception e) {
+                    }
+
+                }
+
+                @Override
+                public void windowIconified(WindowEvent we) {
+                    try {
+                        Frame liveframe = WindowManager.getFrame($impLiveVideo);
+                        if (liveframe != null) {
+                            WindowManager.toFront(liveframe);
+                        }
+                    } catch (Exception e) {
+                        IJ.log("No window available.");
+                    }
+                }
+            };
         }
 
         private int getBufferIndex(int frameAcquired) {
@@ -353,8 +399,8 @@ public class Workers {
                 IJ.log("Warning (Saturation): reduce exposure time or laser power");
             }
 
-            // decide if were to reset dynamic range for every single frame
-            if (Common.$selectedMode.equals(DirectCapturePanel.$mode[1]) || Common.$selectedMode.equals(DirectCapturePanel.$mode[2])) {
+            // decide if were to reset dynamic range for every single frame 
+            if (Common.selectedMode == modeEnum.LIVEVIDEO || Common.selectedMode == modeEnum.CALIBRATION) {
                 Common.ip.resetMinAndMax(); //reset dynamic range for live mode and calibration mode
             } else { //fix dynamic range for acquisiton mode
                 if (isSettingDynamicRange) {
@@ -369,6 +415,7 @@ public class Workers {
             }
         }
 
+        @Override
         protected Void doInBackground() throws Exception {
 
             Thread.currentThread().setName("LiveVideoWorkerV2");
@@ -378,31 +425,6 @@ public class Workers {
 
             settingLiveImage();
 
-//            while (!Common.isPrematureTermination) {
-//                if (Common.isPrematureTermination == true) {
-//                    break;
-//                }
-//
-//                if (Common.showLiveVideoCumul && (SynchronizerWorkerInstant.getCounter() > (Common.transferFrameInterval - 1))) {
-//                    doDisplay(tempPixelArr);
-//                } else {
-//                    try {
-//                        Thread.sleep(10); //100
-//                    } catch (InterruptedException e) {
-//                        // TODO Auto-generated catch block
-//                        e.printStackTrace();
-//                    }
-//
-//                }
-//
-//                try {
-//                    Thread.sleep(sleepTime); //100
-//                } catch (InterruptedException e) {
-//                    // TODO Auto-generated catch block
-//                    e.printStackTrace();
-//                }
-//
-//            }
             while (!Common.isPrematureTermination) {
                 if (Common.isPrematureTermination == true) {
                     break;
@@ -418,7 +440,10 @@ public class Workers {
                 /*
                     Start work
                  */
-                doDisplay(tempPixelArr);
+                if (imagewindowready) {
+                    doDisplay(tempPixelArr);
+                }
+
                 /*
                     End work
                  */
@@ -448,10 +473,12 @@ public class Workers {
         int size;
         int size_f;
         CountDownLatch latch;
-        boolean isSettingDynamicRange;
+        boolean isSettingDynamicRange; // flag to ensure to reset the dynamic range when window is closed
         int sleepTime;
         final int impwinposx = 1110;
         final int impwinposy = 125;
+        String $impLiveVideo;
+        boolean imagewindowready;
 
         public LiveVideoWorkerV3(int width, int height, CountDownLatch latch) {
             this.width = width;
@@ -462,7 +489,8 @@ public class Workers {
 
             //reset live ROI 
             resetROIselection(width, height);
-            isSettingDynamicRange = true; //wheter to reset dynamic range every single frame; Setting to true might causes suddent flash when there is sudden change in max or min counts; setting to false allow user to use built in Fiji brightness tool
+            isSettingDynamicRange = true;
+            imagewindowready = false;
             sleepTime = optimalLiveVideoSleepTime(Common.fps, Common.kineticCycleTime, Common.transferFrameInterval);
         }
 
@@ -470,7 +498,7 @@ public class Workers {
             @Override
             public void mouseClicked(MouseEvent e) {
 
-                if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {
+                if (Common.analysisMode.equals($amode[3])) {//Iccs
                     return;
                 }
 
@@ -554,7 +582,7 @@ public class Workers {
                     templh = (int) rect.getHeight();
 
                     // checker if selected ROI is valid for PCC mode
-                    if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {// == $mode[4]
+                    if (Common.analysisMode.equals($amode[3])) {//Iccs
                         if ((templleft - 1 + Common.CCFdistX + Common.ICCSShiftX + templw) > Common.oWidth || (templleft - 1 + Common.CCFdistX - Common.ICCSShiftX) < 0 || (templtop - 1 + Common.CCFdistY + Common.ICCSShiftY + templh) > Common.oHeight || (templtop - 1 + Common.CCFdistY - Common.ICCSShiftY) < 0 || templleft - 1 + templw > Common.oWidth || templtop - 1 + templh > Common.oHeight) {
                             if (Common.isCCFmode) {
                                 Common.impRoiLive = new Roi(Common.lLeft - 1, Common.lTop - 1, Common.lWidth, Common.lHeight);
@@ -591,7 +619,7 @@ public class Workers {
                     Common.BinYSoft = Common.lHeight;
                 }
 
-                if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {
+                if (Common.analysisMode.equals($amode[3])) {//Iccs
 
                     if (Common.isCCFmode) {
                         Common.impRoiLive = new Roi(Common.lLeft - 1, Common.lTop - 1, Common.lWidth, Common.lHeight);
@@ -636,7 +664,7 @@ public class Workers {
                     Common.isResetCalibPlot = true;
                 }
 
-                if (Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {
+                if (Common.analysisMode.equals($amode[3])) {//Iccs
                     DirectCapturePanel.tfICCSRoi1Coord.setText(Integer.toString(Common.lWidth) + " / " + Integer.toString(Common.lHeight) + " / " + Integer.toString(Common.lLeft) + " / " + Integer.toString(Common.lTop));
                 }
 
@@ -653,7 +681,7 @@ public class Workers {
 
         private static void resetROIselection(int w, int h) {
 
-            if (!Common.$selectedMode.equals(DirectCapturePanel.$mode[4])) {
+            if (Common.selectedMode != modeEnum.ICCS) {//Iccs 
                 if (w < 6 || h < 6) {
                     Common.lLeft = 1;
                     Common.lTop = 1;
@@ -682,7 +710,7 @@ public class Workers {
 
         private void settingLiveImage() {
             Common.ip = new ShortProcessor(width, height);
-            Common.imp = new ImagePlus("Live", Common.ip);
+            Common.imp = new ImagePlus("Live image", Common.ip);
             if (Common.impwin != null) {
                 Common.impwin.close();
             }
@@ -697,6 +725,11 @@ public class Workers {
             } else {
                 Common.impwin.setVisible(false);
             }
+
+            $impLiveVideo = Common.imp.getTitle();
+
+            //prevent minimize and exit of image window
+            Common.impwin.addWindowListener(getWindowAdapter());
 
             //set location
             Common.impwin.setLocation(impwinposx, impwinposy);
@@ -716,8 +749,8 @@ public class Workers {
             IJ.run("In [+]", ""); 	// This needs to be used since ImageJ 1.48v to set the window to the right size; 
             // this might be a bug and is an ad hoc solution for the moment; before only the "Set" command was necessary
 
-            //setting default ROI selector for live display
-            if (Common.$selectedMode.equals(DirectCapturePanel.$mode[2]) || Common.$selectedMode.equals(DirectCapturePanel.$mode[3])) {
+            //setting default ROI selector for live display 
+            if (Common.selectedMode == modeEnum.CALIBRATION || Common.selectedMode == modeEnum.ACQUISITION) {
                 Common.impRoiLive = new Roi(Common.lLeft - 1, Common.lTop - 1, Common.lWidth, Common.lHeight);
                 Common.impRoiLive.setStrokeColor(Color.GREEN);
                 Common.imp.setRoi(Common.impRoiLive);
@@ -730,6 +763,34 @@ public class Workers {
             }
 
             Common.impcan.addMouseListener(impcanLiveMouseUsed);
+            imagewindowready = true;
+        }
+
+        private WindowAdapter getWindowAdapter() {
+            return new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent we) {//overrode to show message
+                    try {
+                        imagewindowready = false;
+                        isSettingDynamicRange = true; //ensure to reset the dynamic range when window is closed
+                        settingLiveImage();
+                    } catch (Exception e) {
+                    }
+
+                }
+
+                @Override
+                public void windowIconified(WindowEvent we) {
+                    try {
+                        Frame liveframe = WindowManager.getFrame($impLiveVideo);
+                        if (liveframe != null) {
+                            WindowManager.toFront(liveframe);
+                        }
+                    } catch (Exception e) {
+                        IJ.log("No window available.");
+                    }
+                }
+            };
         }
 
         private int getBufferIndex(int frameAcquired) {
@@ -741,10 +802,10 @@ public class Workers {
             return (int) ((frameAcquired - Common.transferFrameInterval) % size_f) * size;
         }
 
-        private void doDisplay(short[] tempPixelArr) {
+        private void doDisplay_DEPRECATED(short[] tempPixelArr) {
             // assign last available image for display
             int count = Common.framecounter.getCounter();
-            System.arraycopy(Common.bufferArray1D, getBufferIndex(count), tempPixelArr, 0, size); //
+            System.arraycopy(Common.bufferArray1D, getBufferIndex(count), tempPixelArr, 0, size);
             Common.ip.setPixels(tempPixelArr);
 
             // Saturation warning
@@ -753,9 +814,9 @@ public class Workers {
             }
 
             // decide if were to reset dynamic range for every single frame
-            if (Common.$selectedMode.equals(DirectCapturePanel.$mode[1]) || Common.$selectedMode.equals(DirectCapturePanel.$mode[2])) {
-                Common.ip.resetMinAndMax(); //reset dynamic range for live mode and calibration mode
-            } else { //fix dynamic range for acquisiton mode
+            if (Common.getAutoAdjustImageDynamicRange()) {
+                Common.ip.resetMinAndMax(); //reset dynamic range
+            } else {
                 if (isSettingDynamicRange) {
                     Common.ip.setMinAndMax(Common.ip.getMin(), Common.ip.getMax());
                     isSettingDynamicRange = false;
@@ -768,12 +829,56 @@ public class Workers {
             }
         }
 
+        private void doDisplayImage(short[] PixelArrForDisp) {
+
+            // Setting pixel value
+            Common.ip.setPixels(PixelArrForDisp);
+
+            // Saturation warning
+            if (Common.ip.getMax() > Common.WarningCounts) {
+                IJ.log("Warning (Saturation): reduce exposure time or laser power");
+            }
+
+            // decide if were to reset dynamic range for every single frame
+            if (Common.getAutoAdjustImageDynamicRange()) {
+                Common.ip.resetMinAndMax(); //reset dynamic range
+            } else {
+                if (isSettingDynamicRange) {
+                    Common.ip.setMinAndMax(Common.ip.getMin(), Common.ip.getMax());
+                    isSettingDynamicRange = false;
+                }
+            }
+
+            Common.imp.updateAndDraw();
+            if (!Common.impwin.isVisible()) {
+                Common.impwin.setVisible(true);// Problematic: startle settings combobox when called sequentially at fast rate; threfore is the if statement
+            }
+        }
+
+        private void fillImageProcessorArray(short[] tempPixelArr, int count) {
+            System.arraycopy(Common.bufferArray1D, getBufferIndex(count), tempPixelArr, 0, size);
+        }
+
+        private void performSumOperation(short[] tempPixelArr, short[] PixelArrForDisp) {
+            for (int i = 0; i < tempPixelArr.length; i++) {
+                PixelArrForDisp[i] = (short) (PixelArrForDisp[i] + tempPixelArr[i]);
+            }
+        }
+
+        private void performDivisionOperation(short[] PixelArrForDisp, int div) {
+            for (int i = 0; i < PixelArrForDisp.length; i++) {
+                PixelArrForDisp[i] = (short) (PixelArrForDisp[i] / div);
+            }
+        }
+
+        @Override
         protected Void doInBackground() throws Exception {
 
             Thread.currentThread().setName("LiveVideoWorkerV3");
             printlogthread("Staring thread: " + Thread.currentThread().getName());
 
-            short[] tempPixelArr = new short[size]; //reusing tempPixelArray to hold portion of Java1Dbuffer
+            short[] PixelArrForDisplay = new short[size]; //reusing tempPixelArray to hold portion of Java1Dbuffer (cumulative depending on the type of binning)
+            short[] tempArr = new short[size]; //hold at any one time temporary value of a pixel at certain frame
 
             settingLiveImage();
 
@@ -782,8 +887,136 @@ public class Workers {
                     break;
                 }
 
-                if (Common.showLiveVideoCumul && (Common.framecounter.getCounter() > (Common.transferFrameInterval - 1))) {
-                    doDisplay(tempPixelArr);
+                // Retrieve UI paremeters
+                int temp_livevideo_displayFramesMode = Common.livevideo_displayFramesMode;
+                int temp_livevideo_binningNo = Common.livevideo_binningNo;
+                liveVideoBinModeEnum temp_selectedliveVideoBinMode = Common.selected_livevideo_binningMode;
+
+                if (imagewindowready && Common.showLiveVideoCumul && (Common.framecounter.getCounter() > (Common.transferFrameInterval - 1))) {
+
+//                    doDisplay_DEPRECATED(PixelArrForDisplay);
+                    if (temp_selectedliveVideoBinMode.equals(liveVideoBinModeEnum.NO_BINNING)) {
+
+                        int currcount = Common.framecounter.getCounter();
+//                        IJ.log("no binning currcount: " + currcount);
+                        boolean proceed = false;
+
+                        // add a check to plot curcount - 1 if frame is valid
+                        switch (temp_livevideo_displayFramesMode) {
+                            case 1:
+                                // odd frames
+                                if (currcount % 2 == 1) {
+                                    proceed = true;
+                                } else {
+                                    if (currcount - 1 > 0) {
+                                        currcount = currcount - 1;
+                                        proceed = true;
+                                    }
+                                }
+                                break;
+                            case 2:
+                                // even frames
+                                if (currcount % 2 == 0) {
+                                    proceed = true;
+                                } else {
+                                    if (currcount - 1 > 0) {
+                                        currcount = currcount - 1;
+                                        proceed = true;
+                                    }
+                                }
+                                break;
+                            default:
+                                // all frames
+                                proceed = true;
+                        }
+
+                        if (proceed) {
+//                            IJ.log("proceed currcount: " + currcount);
+                            fillImageProcessorArray(PixelArrForDisplay, currcount); //retrieve array counts from circular buffer of size w * h (one frame worth of intensity)
+                            doDisplayImage(PixelArrForDisplay);
+
+                        }
+
+                    } else {
+
+                        //reset PixelArrForDisplay
+                        for (int i = 0; i < PixelArrForDisplay.length; i++) {
+                            PixelArrForDisplay[i] = 0;
+                        }
+
+                        int accumulatedFrame = 0;
+                        int memcount2 = 0;
+
+                        while (accumulatedFrame != temp_livevideo_binningNo) {
+
+                            if (Common.isPrematureTermination == true) {
+                                break;
+                            }
+
+                            int currcount = Common.framecounter.getCounter();
+                            boolean proceed = false;
+
+                            if (memcount2 != 0) {
+                                //check if valid new frame available
+                                if (currcount >= memcount2) {
+                                    proceed = true;
+                                }
+
+                            } else {
+                                memcount2 = currcount;
+                                proceed = true;
+                            }
+
+                            boolean proceed2 = false;
+                            if (proceed) {
+                                switch (temp_livevideo_displayFramesMode) {
+                                    case 1:
+                                        // odd frames
+                                        if (memcount2 % 2 == 1) {
+                                            proceed2 = true;
+                                        }
+                                        break;
+                                    case 2:
+                                        // even frames
+                                        if (memcount2 % 2 == 0) {
+                                            proceed2 = true;
+                                        }
+                                        break;
+                                    default:
+                                        // all frames
+                                        proceed2 = true;
+                                }
+                            }
+
+                            if (proceed2) {
+                                fillImageProcessorArray(tempArr, memcount2); //retrieve array counts from circular buffer of size w * h (one frame worth of intensity)
+                                performSumOperation(tempArr, PixelArrForDisplay); //sum two array
+                                accumulatedFrame++;
+                                switch (temp_livevideo_displayFramesMode) {
+                                    case 0:
+                                        // all frames
+                                        memcount2++;
+                                        break;
+
+                                    default:
+                                        // odd or even frames
+                                        memcount2 = memcount2 + 2;
+                                }
+                            }
+
+                            if (accumulatedFrame == 0) {
+                                memcount2 = 0;
+                            }
+
+                        }
+
+                        if (temp_selectedliveVideoBinMode.equals(liveVideoBinModeEnum.AVERAGE_BINNING)) {
+                            performDivisionOperation(PixelArrForDisplay, accumulatedFrame);
+                        }
+
+                        doDisplayImage(PixelArrForDisplay);
+                    }
+
                 } else {
                     try {
                         Thread.sleep(10); //100
@@ -970,13 +1203,15 @@ public class Workers {
         public volatile int frameend; //  eg. 5001 for 5000 plot interval
         private int tempPlotInterval;
 
+        boolean proceed;
+
         public NonCumulativeACFWorkerV3(int width, int height, CountDownLatch latch, int arraysize) {
             this.oWidth = width;
             this.oHeight = height;
             this.latch = latch;
             this.size = width * height;
             this.size_f = (arraysize - (arraysize % size)) / size;
-            Common.fromImFCSobj1 = new ImFCSCorrelator();
+            Common.fromImFCSobj1 = new ImFCSCorrelator("Non-cumulative");
         }
 
         private void holdUserInputToTemp() {
@@ -1127,48 +1362,53 @@ public class Workers {
                     break;
                 }
 
-                holdUserInputToTemp();
+                proceed = Common.analysisMode.equals($amode[1]); //non-cumulative
 
-                InitStack();    //instantiate ImageStack object(s)
+                if (proceed) {
+                    holdUserInputToTemp();
 
-                //wait untill enough frames is available to buffer
-                while (Common.framecounter.getCounter() < frameend) {
+                    InitStack();    //instantiate ImageStack object(s)
+
+                    //wait untill enough frames is available to buffer
+                    while (Common.framecounter.getCounter() < frameend) {
+                        if (Common.isPrematureTermination == true) {
+                            break;
+                        }
+                        Thread.sleep(100); // not relly important. can't noticeably differentiate 100ms delay
+                    }
+
+                    /*
+                    START
+                    Fill ImageStack array to be passed for calculation and display
+                     */
+                    //Fill Green channel  and Red Channel if CCF mode is true
+                    fillImageStack(needToReset(), Common.ims_nonCumGreen, "green");
+                    if (isCCFmode) {
+                        fillImageStack(needToReset(), Common.ims_nonCumRed, "red");
+                    }
+
+                    //Set Imp green to imfcs obj //TODO use Ims instead
+                    Common.fromImFCSobj1.settingImp(getPlus("green"));
+                    if (isCCFmode) {//Set Imp red to imfcs obj if CCFmode is true
+                        Common.fromImFCSobj1.settingImp2(getPlus("red"));
+                    }
+
                     if (Common.isPrematureTermination == true) {
                         break;
                     }
-                    Thread.sleep(100); // not relly important. can't noticeably differentiate 100ms delay
-                }
 
-                /*
-                    START
-                    Fill ImageStack array to be passed for calculation and display
-                 */
-                //Fill Green channel  and Red Channel if CCF mode is true
-                fillImageStack(needToReset(), Common.ims_nonCumGreen, "green");
-                if (isCCFmode) {
-                    fillImageStack(needToReset(), Common.ims_nonCumRed, "red");
-                }
+                    if (Common.fromImFCSobj1.settingPlotOption(Common.plotACFCurves, Common.plotTrace, Common.plotAverage, Common.plotJustCCF, CCFdistX, CCFdistY, Common.plotCalibAmplitude, Common.plotCalibDiffusion, Common.isResetCalibPlot, Common.noptsavr, Common.background, Common.plotCalibIntensity, Common.isCalibFixScale, $amode[1], 1)) {
+                        Common.fromImFCSobj1.settingExpParameters(Common.pixelSize * Common.inCameraBinning, Common.objMag, Common.NA, Common.emlambda, Common.sigmaxy);
+                        Common.isResetCalibPlot = false;
+                        Common.fromImFCSobj1.runPlotACF();
+                    }
 
-                //Set Imp green to imfcs obj //TODO use Ims instead
-                Common.fromImFCSobj1.settingImp(getPlus("green"));
-                if (isCCFmode) {//Set Imp red to imfcs obj if CCFmode is true
-                    Common.fromImFCSobj1.settingImp2(getPlus("red"));
-                }
-
-                if (Common.isPrematureTermination == true) {
-                    break;
-                }
-
-                if (Common.fromImFCSobj1.settingPlotOption(Common.plotACFCurves, Common.plotTrace, Common.plotAverage, Common.plotJustCCF, CCFdistX, CCFdistY, Common.plotCalibAmplitude, Common.plotCalibDiffusion, Common.isResetCalibPlot, Common.noptsavr, Common.background, Common.plotCalibIntensity, Common.isCalibFixScale)) {
-                    Common.fromImFCSobj1.settingExpParameters(Common.pixelSize * Common.inCameraBinning, Common.objMag, Common.NA, Common.emlambda, Common.sigmaxy);
-                    Common.isResetCalibPlot = false;
-                    Common.fromImFCSobj1.runPlotACF();
-                }
-
-                /*
+                    /*
                     END
                     Fill ImageStack array to be passed for calculation and display
-                 */
+                     */
+                }
+
             }
 
             printlogthread("Ending thread: " + Thread.currentThread().getName());
@@ -1261,6 +1501,7 @@ public class Workers {
         // Stack storage
         private CountDownLatch latch;
         private static int previousFC;
+        boolean proceed;
 
         public CumulativeACFWorkerV3(CountDownLatch latch) {
             this.latch = latch;
@@ -1301,7 +1542,7 @@ public class Workers {
             Thread.currentThread().setName("CumulativeACFWorkerV3");
             printlogthread("Staring thread: " + Thread.currentThread().getName());
 
-            Common.fromImFCSobj1 = new ImFCSCorrelator();
+            Common.fromImFCSobj2 = new ImFCSCorrelator("Cumulative");
 
             while (Common.framecounterIMSX.getCount() < Common.totalFrame) {
                 if (Common.isPrematureTermination == true) {
@@ -1310,16 +1551,20 @@ public class Workers {
                 // sleep necessary
                 Thread.sleep(10);//100
 
-                //setting plotinterval argument to 1 will plot as soon as calculation is done
-                if (!isImageReady(Common.transferFrameInterval, Common.cumulativePlotInterval, Common.ims_cum.getSize())) {
-                    continue;
-                }
+                proceed = Common.analysisMode.equals($amode[2]); //cumulative
 
-                Common.imp_cum = new ImagePlus("imp acquisition", Common.ims_cum);
+                if (proceed) {
+                    //setting plotinterval argument to 1 will plot as soon as calculation is done
+                    if (!isImageReady(Common.transferFrameInterval, Common.cumulativePlotInterval, Common.ims_cum.getSize())) {
+                        continue;
+                    }
 
-                Common.fromImFCSobj1.settingImp(Common.imp_cum);
-                if (Common.fromImFCSobj1.settingPlotOption(Common.plotACFCurves, Common.plotTrace, Common.plotAverage, Common.plotJustCCF, Common.CCFdistX, Common.CCFdistY, Common.plotCalibAmplitude, Common.plotCalibDiffusion, Common.isResetCalibPlot, Common.noptsavr, Common.background, Common.plotCalibIntensity, Common.isCalibFixScale)) {
-                    Common.fromImFCSobj1.runPlotACF();//does not wrap SwingWorker on CorrelateROI
+                    Common.imp_cum = new ImagePlus("imp acquisition", Common.ims_cum);
+
+                    Common.fromImFCSobj2.settingImp(Common.imp_cum);
+                    if (Common.fromImFCSobj2.settingPlotOption(Common.plotACFCurves, Common.plotTrace, Common.plotAverage, Common.plotJustCCF, Common.CCFdistX, Common.CCFdistY, Common.plotCalibAmplitude, Common.plotCalibDiffusion, Common.isResetCalibPlot, Common.noptsavr, Common.background, Common.plotCalibIntensity, Common.isCalibFixScale, $amode[2], Common.fitStartCumulative)) {
+                        Common.fromImFCSobj2.runPlotACF();//does not wrap SwingWorker on CorrelateROI
+                    }
                 }
 
             }
@@ -1445,9 +1690,9 @@ public class Workers {
                 }
             }
 
-//            short[] tempPixelArr = new short[size]; //reusing tempPixelArray to hold portion of Java1Dbuffer
-//            System.arraycopy(Common.bufferArray1D, getBufferIndex(frameIdx), tempPixelArr, 0, size); //
-//            ip_ICCS.setPixels(tempPixelArr);
+//            short[] PixelArrForDisplay = new short[size]; //reusing tempPixelArray to hold portion of Java1Dbuffer
+//            System.arraycopy(Common.bufferArray1D, getBufferIndex(frameIdx), PixelArrForDisplay, 0, size); //
+//            ip_ICCS.setPixels(PixelArrForDisplay);
         }
 
         private void holdUserInputToTemp() {

@@ -21,13 +21,18 @@ import static directCameraReadout.gui.DirectCapturePanel.tfPlotInterval;
 import static directCameraReadout.util.Utilities.retMaxAllowablePlotInterval;
 import static directCameraReadout.util.Utilities.setSizeAandSizeB;
 import static directCameraReadout.updater.Updater.*;
+import ij.WindowManager;
+import java.awt.Frame;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import javax.swing.JOptionPane;
 
 public class DisplayImage {
 
     final int impwinposx = 1110;
     final int impwinposy = 125;
     boolean isReadConfig;
-    ImagePlus imp;
+    public ImagePlus imp;
     ShortProcessor ip;
     public ImageWindow impwin;
     ImageCanvas impcan;
@@ -36,6 +41,7 @@ public class DisplayImage {
     double scimp;
     final int multiplierFactor = 30000;//49152;
     boolean isHamamatsu;
+    String $impTitleROISelectionWindow;
 
     public ArrayList<ArrayList<int[]>> aListArrayBuffer = new ArrayList<>(); //o index, 1 value
 //        private ArrayList<ArrayList<int[]>> aListCroppedModeArrayBuffer = new ArrayList<>(); //o index, 1 value
@@ -71,6 +77,8 @@ public class DisplayImage {
             aListArrayBuffer.add(ar0array);
 
         }
+
+      
     }
 
     private int[] fillzero(int bin, int maxdimensionX, int maxdimensionY) {
@@ -84,7 +92,7 @@ public class DisplayImage {
         return res;
     }
 
-    public void toggleDisplay(boolean isOn) {
+    public void toggleDisplay(boolean isOn, boolean isPerformROISelection) {
         if (isOn) {
             boolean isBinChanged = false;
             int sizeX = (int) Math.floor(DirectCapturePanel.Common.MAXpixelwidth / DirectCapturePanel.Common.inCameraBinning);
@@ -99,7 +107,9 @@ public class DisplayImage {
                 createImp(sizeX, sizeY);
             }
 
-            DisplayImageObj.performROIselection(DirectCapturePanel.Common.oLeft - 1, DirectCapturePanel.Common.oTop - 1, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight);
+            if (isPerformROISelection) {
+                DisplayImageObj.performROIselection(DirectCapturePanel.Common.oLeft - 1, DirectCapturePanel.Common.oTop - 1, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight);
+            } 
             DisplayImageObj.impwin.setVisible(true);
 
         } else {
@@ -111,16 +121,20 @@ public class DisplayImage {
     private void createImp(int sizeX, int sizeY) {
         ip = new ShortProcessor(sizeX, sizeY);
         fillIpfromBuffer(sizeX, sizeY, DirectCapturePanel.Common.inCameraBinning, DirectCapturePanel.Common.isCropMode);
-        imp = new ImagePlus("ROI selection", ip);
+        imp = new ImagePlus("ROI Selector Window", ip);
         if (impwin != null) {
             impwin.close();
         }
         imp.show();
         impwin = imp.getWindow();
         impcan = imp.getCanvas();
+        $impTitleROISelectionWindow = imp.getTitle();
 
         //set location
         impwin.setLocation(impwinposx, impwinposy);
+
+        //prevent minimize and exit of image window
+        impwin.addWindowListener(getWindowAdapter());
 
         //To achieve same frame dimension given size of pixels follows power regression y = a*x^b
         scimp = multiplierFactor * Math.pow(sizeX, -1);
@@ -132,6 +146,37 @@ public class DisplayImage {
 
         impcan.setFocusable(true);
         impcan.addMouseListener(impcanDisplayImageMouseUsed);
+    }
+
+    private WindowAdapter getWindowAdapter() {
+        return new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent we) {//overrode to show message
+                try {
+                    int sizeX = (int) Math.floor(DirectCapturePanel.Common.MAXpixelwidth / DirectCapturePanel.Common.inCameraBinning);
+                    int sizeY = (int) Math.floor(DirectCapturePanel.Common.MAXpixelheight / DirectCapturePanel.Common.inCameraBinning);
+                    createImp(sizeX, sizeY);
+                    DisplayImageObj.performROIselection(DirectCapturePanel.Common.oLeft - 1, DirectCapturePanel.Common.oTop - 1, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight);
+                    DisplayImageObj.impwin.setVisible(true);
+                } catch (Exception e) {
+                }
+
+                JOptionPane.showMessageDialog(we.getComponent(), "Toggle off ROI on main panel to hide image window.");
+            }
+
+            @Override
+            public void windowIconified(WindowEvent we) {
+                try {
+                    Frame roiselectorframe = WindowManager.getFrame($impTitleROISelectionWindow);
+                    if (roiselectorframe != null) {
+                        WindowManager.toFront(roiselectorframe);
+                    }
+                } catch (Exception e) {
+                    IJ.log("No window available.");
+                }
+                JOptionPane.showMessageDialog(we.getComponent(), "Toggle off ROI on main panel to hide image window.");
+            }
+        };
     }
 
     public int getIndexOfBin(ArrayList<ArrayList<int[]>> aList, int bin) {
@@ -221,6 +266,11 @@ public class DisplayImage {
         @Override
         public void mouseClicked(MouseEvent e) {// update acquisition AOIs namely left and top 
 
+            if (DirectCapturePanel.Common.isAcquisitionRunning) { // Catch to prevent user changing ROI selector window while camera is running
+                performROIselection(DirectCapturePanel.Common.oLeft - 1, DirectCapturePanel.Common.oTop - 1, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight);
+                return;
+            }
+
             if (DirectCapturePanel.Common.isCropMode == 0) {
                 JDimensionpanelComponentPanel.TriggerDimTfKeyListener = false;
                 int px = e.getX();
@@ -295,6 +345,11 @@ public class DisplayImage {
 
         @Override
         public void mouseReleased(MouseEvent arg0) {
+
+            if (DirectCapturePanel.Common.isAcquisitionRunning) { // Catch to prevent user changing ROI selector window while camera is running
+                performROIselection(DirectCapturePanel.Common.oLeft - 1, DirectCapturePanel.Common.oTop - 1, DirectCapturePanel.Common.oWidth, DirectCapturePanel.Common.oHeight);
+                return;
+            }
 
             if (DirectCapturePanel.Common.isCropMode == 0) {
                 JDimensionpanelComponentPanel.TriggerDimTfKeyListener = false;

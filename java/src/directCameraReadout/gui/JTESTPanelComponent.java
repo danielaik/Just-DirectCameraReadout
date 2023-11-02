@@ -16,6 +16,11 @@ import javax.swing.JPanel;
 
 import directCameraReadout.gui.DirectCapturePanel.*;
 import directCameraReadout.gui.DirectCapturePanel.ORpanel;
+import directCameraReadout.system.SystemInfo;
+import ij.ImagePlus;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryPoolMXBean;
 
 public class JTESTPanelComponent extends JFrame {
 
@@ -39,10 +44,10 @@ public class JTESTPanelComponent extends JFrame {
         JTESTPane.setBorder(BorderFactory.createTitledBorder("For-debugging"));
 
         //initialize
-        btnTest = new JButton("memory");
-        JButton btnTest2 = new JButton("set bckg");
-        JButton btnTest3 = new JButton("set cumPI");
-        JButton btnTest4 = new JButton("ex GC");
+        btnTest = new JButton("Mem check");
+        JButton btnTest2 = new JButton("");
+        JButton btnTest3 = new JButton("");
+        JButton btnTest4 = new JButton("");
 
         //FocusFinderPane (top panel)
         JTESTPane.add(btnTest);
@@ -101,7 +106,25 @@ public class JTESTPanelComponent extends JFrame {
         return true;
     }
 
+    private boolean maxSizePerStacksDialog() {
+        int sizeInGB = (int) Math.floor(Common.maximumBytePerStack / Math.pow(10, 9));
+        int ret;
+        GenericDialog gd = new GenericDialog("File saving");
+        gd.addMessage("Enter your preferred maxium size per imagestacks (in GB). File larger than this value will be splitted into multiple .tiff");
+        gd.addNumericField("Max GB per stack", sizeInGB, 0);
+        gd.showDialog();
+        if (gd.wasOKed()) {
+            ret = (int) gd.getNextNumber();
+            Common.maximumBytePerStack = ret * Math.pow(10, 9);
+            IJ.log("maximumBytePerStack: " + Common.maximumBytePerStack);
+            return true;
+        }
+        return false;
+
+    }
+
     ActionListener btnTest4Pressed = (ActionEvent event) -> {
+//        SystemInfo.explicitGC();
 //        long time = System.nanoTime();
 //        /* 
 //            Excplicit GC
@@ -123,28 +146,30 @@ public class JTESTPanelComponent extends JFrame {
     };
 
     ActionListener btnTest3Pressed = (ActionEvent event) -> {
-//        cumulativePlotIntervalDialog();
+//        maxSizePerStacksDialog();
     };
 
     ActionListener btnTest2Pressed = (ActionEvent event) -> {
-        bckgDialog();
+//        bckgDialog();
     };
 
     ActionListener btnTestPressed = (ActionEvent event) -> {
 
-//        IJ.log("in camera binning: " + Common.inCameraBinning);
-//        IJ.log("pixel size = " + Common.pixelSize + ", magnification = " + Common.objMag + ", NA = " + Common.NA + ", Emission = " + Common.emlambda + ", PSF(xy) = " + Common.sigmaxy);
-
-//        IJ.log("size_a: " + DirectCapturePanel.Common.size_a + ", size_b: " + DirectCapturePanel.Common.size_b);
-//        IJ.log("Ham READOUTSPEED: " + Common_Orca.readoutSpeed);
-//        IJ.log("Ham SENSORMODE: " + Common_Orca.sensorMode);
-//        IJ.log("outtrig: " + Common_Orca.OutputTriggerKind);
-//        IJ.log("OutDelay: " + Common_Orca.outTriggerDelay);
-//        IJ.log("OutPeriod: " + Common_Orca.outTriggerPeriod);
-        IJ.log("Total memory: " + DirectCapturePanel.sysinfo.totalMem() / 1000000 + " MB");
-        IJ.log("Used memory: " + DirectCapturePanel.sysinfo.usedMem() / 1000000 + " MB");
-        IJ.log("Free memory: " + DirectCapturePanel.sysinfo.freeMem() / 1000000 + " MB");
-
+        IJ.log("***********");
+        IJ.log("Total designated memory: " + SystemInfo.totalDesignatedMemory() / 1000000 + " MB");
+        IJ.log("Total allocated memory: " + SystemInfo.totalAllocatedMemory() / 1000000 + " MB");
+        IJ.log("Current allocated free memory: " + SystemInfo.currentAllocatedFreeMemory() / 1000000 + " MB");
+        IJ.log("Used memory: " + SystemInfo.usedMemory() / 1000000 + " MB");
+        IJ.log("Total free memory: " + SystemInfo.totalFreeMemory() / 1000000 + " MB");
+//
+//        MemoryMXBean m = ManagementFactory.getMemoryMXBean();
+//        IJ.log("Non-heap: " + m.getNonHeapMemoryUsage().getMax());
+//        IJ.log("Heap: " + m.getHeapMemoryUsage().getMax());
+//        for (MemoryPoolMXBean mp : ManagementFactory.getMemoryPoolMXBeans()) {
+//            IJ.log("Pool: " + mp.getName()
+//                    + " (type " + mp.getType() + ")"
+//                    + " = " + mp.getUsage().getMax());
+//        }
 //        IJ.log("pass by constructor: " + ORPobj.TEST_ORP);
 //
 //        IJ.log("--------");
@@ -166,11 +191,11 @@ public class JTESTPanelComponent extends JFrame {
 //            IJ.log("iscropmode: " + Common.isCropMode);
 //            IJ.log("size_a: " + Common.size_a + ", size_b: " + Common.size_b + ", fti: " + Common.transferFrameInterval + ", fps: " + Common.fps);
 //
-//            if (Common.$selectedMode == "Live Video" || Common.$selectedMode == "Calibration") {
+//            if (Common.selectedMode == "Live Video" || Common.selectedMode == "Calibration") {
 //                IJ.log("framecounter: " + Common.framecounter.getCount());
 //                IJ.log("direct call framecounter: " + Common.framecounter.count);
 //            }
-//            if (Common.$selectedMode == "Acquisition") {
+//            if (Common.selectedMode == "Acquisition") {
 //                IJ.log("framecounter: " + Common.framecounter.getCount());
 //                IJ.log("direct call framecounter: " + Common.framecounter.count);
 //                IJ.log("framecounterIMS: " + Common.framecounterIMS.getCount());
@@ -230,7 +255,7 @@ public class JTESTPanelComponent extends JFrame {
 //            IJ.log("----------------------------");
 //            IJ.log("isshutsystempressed: " + Common.isShutSystemPressed + ", isstoppreeedd: " + Common.isStopPressed + ",isacquisitioRuning: " + Common.isAcquisitionRunning + ", isPrematureTermination: " + Common.isPrematureTermination + ",isSaveDone: " + Common.isSaveDone + ", isPlotACF: " + Common.isPlotACFdone + ", isImageready: " + Common.isImageReady);
 //            IJ.log("size_a: " + Common.size_a + ", size_b: " + Common.size_b + ", fti: " + Common.transferFrameInterval + ", fps: " + Common.fps);
-//            IJ.log("CameraHeadmodel/serial: " + Common.$cameraHeadModel + "/" + Common.$serialNumber + ", selectedmode: " + Common.$selectedMode);
+//            IJ.log("CameraHeadmodel/serial: " + Common.$cameraHeadModel + "/" + Common.$serialNumber + ", selectedmode: " + Common.selectedMode);
 //            IJ.log("ExposureTime: " + Common.exposureTime + ", totalFrame: " + Common.totalFrame + ", plotInterval: " + Common.plotInterval + ", kinetic cycle: " + Common.kineticCycleTime);
 //            IJ.log("BinXSoft: " + Common.BinXSoft + " , BinYSoft: " + Common.BinYSoft + ", incamerabining: " + Common.inCameraBinning);
 //            IJ.log("MaxPixelWidth: " + Common.MAXpixelwidth + ", MaxPixelHeight: " + Common.MAXpixelheight + ", minHeight: " + Common.minHeight);
@@ -255,7 +280,7 @@ public class JTESTPanelComponent extends JFrame {
 //            IJ.log("tempstatus: " + AndorSDK3v2.GetEnumeratedStringSDK3("TemperatureStatus"));
 //            IJ.log("Temperature status: " + Common.tempStatus[1] + ", Temperature: " + Common.tempStatus[0]);
 //            IJ.log("BinXSoft: " + Common.BinXSoft + " , BinYSoft: " + Common.BinYSoft + ", incamerabining: " + Common.inCameraBinning);
-//            IJ.log("CameraHeadmodel/serial: " + Common.$cameraHeadModel + "/" + Common.$serialNumber + ", selectedmode: " + Common.$selectedMode);
+//            IJ.log("CameraHeadmodel/serial: " + Common.$cameraHeadModel + "/" + Common.$serialNumber + ", selectedmode: " + Common.selectedMode);
 //            IJ.log("isshutsystempressed: " + Common.isShutSystemPressed + ", isstoppreeedd: " + Common.isStopPressed + ",isacquisitioRuning: " + Common.isAcquisitionRunning + ", isPrematureTermination: " + Common.isPrematureTermination + ",isSaveDone: " + Common.isSaveDone + ", isPlotACF: " + Common.isPlotACFdone + ", isImageready: " + Common.isImageReady);
 //            IJ.log("size_a: " + Common.size_a + ", size_b: " + Common.size_b + ", fti: " + Common.transferFrameInterval + ", fps: " + Common.fps);
 //            IJ.log("MaxPixelWidth: " + Common.MAXpixelwidth + ", MaxPixelHeight: " + Common.MAXpixelheight + ", minHeight: " + Common.minHeight);
@@ -271,7 +296,7 @@ public class JTESTPanelComponent extends JFrame {
 //            IJ.log("----------------------------");
 //            IJ.log("isshutsystempressed: " + Common.isShutSystemPressed + ", isstoppreeedd: " + Common.isStopPressed + ",isacquisitioRuning: " + Common.isAcquisitionRunning + ", isPrematureTermination: " + Common.isPrematureTermination + ",isSaveDone: " + Common.isSaveDone + ", isPlotACF: " + Common.isPlotACFdone + ", isImageready: " + Common.isImageReady);
 //            IJ.log("size_a: " + Common.size_a + ", size_b: " + Common.size_b + ", fti: " + Common.transferFrameInterval + ", fps: " + Common.fps);
-//            IJ.log("CameraHeadmodel/serial: " + Common.$cameraHeadModel + "/" + Common.$serialNumber + ", selectedmode: " + Common.$selectedMode);
+//            IJ.log("CameraHeadmodel/serial: " + Common.$cameraHeadModel + "/" + Common.$serialNumber + ", selectedmode: " + Common.selectedMode);
 //            IJ.log("ExposureTime: " + Common.exposureTime + ", totalFrame: " + Common.totalFrame + ", plotInterval: " + Common.plotInterval + ", kinetic cycle: " + Common.kineticCycleTime);
 //            IJ.log("BinXSoft: " + Common.BinXSoft + " , BinYSoft: " + Common.BinYSoft + ", incamerabining: " + Common.inCameraBinning);
 //            IJ.log("MaxPixelWidth: " + Common.MAXpixelwidth + ", MaxPixelHeight: " + Common.MAXpixelheight + ", minHeight: " + Common.minHeight);

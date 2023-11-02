@@ -4,9 +4,10 @@
  * PVCam_3.9.0.4-PMQI_Release_Setup 
  * bundling pvcam64.dll and pvcamDDI.dll does not work
 
- * develop with PVCAM SDK 3.8.0.6
+ * develop with PVCAM SDK 3.10.1.1
  * Tested on Photometrics Evolve 512 monochrome EMCCD camera SN A10D1033015
- * Tested on Photometrics 95B "GS144BSI"
+ * Tested on Photometrics 95B "GS144BSI" 
+ * Tested on Photometrics TMP-Kinetix
  */
 package directCameraReadout.pvcamsdk;
 
@@ -37,6 +38,7 @@ import directCameraReadout.gui.DirectCapturePanel;
 import directCameraReadout.gui.DirectCapturePanel.Common;
 import directCameraReadout.control.FrameCounter;
 import directCameraReadout.control.FrameCounterX;
+import directCameraReadout.gui.cameraConstant;
 import directCameraReadout.workers.Workers.*;
 import static directCameraReadout.workers.Workers.LiveVideoWorkerV2Instant;
 import static directCameraReadout.workers.Workers.SynchronizerWorkerInstant;
@@ -45,14 +47,15 @@ import static directCameraReadout.workers.Workers.BufferToStackWorkerInstant;
 import static directCameraReadout.workers.Workers.CumulativeACFWorkerV3Instant;
 import static directCameraReadout.workers.Workers.ICCSWorkerInstant;
 import static directCameraReadout.workers.Workers.NonCumulativeACFWorkerV3Instant;
+import static version.VERSION.DCR_VERSION;
+import static version.VERSION.PVCAMSDK4_VERSION;
+import static directCameraReadout.gui.cameraConstant.Common_Photometrics;
 
 public class Photometrics_PVCAM_SDK {
 
     // NOTE: 
-    // VERSION of the used PVCAM library.
-    // VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this VERSION num in Fiji.App > jars.
-    public static final String VERSION = "v1_1_2";
-
+    // DCR_VERSION of the used PVCAM library.
+    // DCR_VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this DCR_VERSION num in Fiji.App > jars.
     private static void printlog(String msg) {
         if (false) {
             IJ.log(msg);
@@ -142,7 +145,7 @@ public class Photometrics_PVCAM_SDK {
                     tempdir.mkdir();
                 }
 
-                File liveReadoutPhotometricsSDK_dir = new File(tempdir.toString() + "/" + VERSION);
+                File liveReadoutPhotometricsSDK_dir = new File(tempdir.toString() + "/" + PVCAMSDK4_VERSION);
                 libDirPath = liveReadoutPhotometricsSDK_dir.toString();
 
 //                boolean Write_pvcam64 = IsWindows, Write_pvcamddi = IsWindows; //pvcam
@@ -293,7 +296,7 @@ public class Photometrics_PVCAM_SDK {
 
     public static native int[] GetDetectorDimPVCAM();
 
-    public static native int setParameterPVCAM(double exposureTime, int Width, int Height, int Left, int Top, int Incamerabin, int acqmode, int totalframe, int buffersizeFrame, int arraysizePixel); //index Left Top start from 1; Width and Heught represent pixel size after factored in "physical binning/incamerabin"
+    public static native int setParameterPVCAM(double exposureTime, int Width, int Height, int Left, int Top, int Incamerabin, int acqmode, int totalframe, int buffersizeFrame, int arraysizePixel, int readoutPortIndex, int readoutSpeedIndex); //index Left Top start from 1; Width and Heught represent pixel size after factored in "physical binning/incamerabin"
 
     public static native double getKineticCyclePVCAM();
 
@@ -307,24 +310,45 @@ public class Photometrics_PVCAM_SDK {
 
     public static native int debugMyData2PVCAM();
 
-    public static native double getDoubleValuePVCAM(String ID); //ID - exposuretime; ID - frametime; ID - top; ID - left; ID - width; ID - height; ID - CPPtime1; ID - CPPtime2; ID - CPPtime3;ID - CPPtime4;ID - CPPtime5;ID - incamerabin;
+    public static native double getDoubleValuePVCAM(String ID); //ID - exposuretime; ID - frametime; ID - top; ID - left; ID - width; ID - height; ID - CPPtime1; ID - CPPtime2; ID - CPPtime3;ID - CPPtime4;ID - CPPtime5;ID - incamerabin; "frameTransfer"; "PMODE; "BIT_DEPTH"; "readoutFrequency";
     //1 total time elapse from start - end including JNI transfer
     //2 time set parameter
     //3 uns16 buffer to float array (average)
     //4 JNI transfer (average)
     //5 average transfer + JNI
+    
+    public static native int getPortSize(); //Get available port size
+    
+    public static native int getSpeedCount(int portIndex); //Get number of available speeds for this port
+    
+    public static native void setPortAndSpeedPair(int portIndex, int speedIndex);
+    
+    
 
     /*- inca
     JNI END
      */
     // Working Version (single capture mode)
-    public static void runThread_singlecapture() {
+    public static void runThread_singlecapture(boolean isFF) {
+
+        if (isFF) {
+            //Recall previous ROI setting
+            Common.mem_oWidth = Common.oWidth;
+            Common.mem_oHeight = Common.oHeight;
+            Common.mem_oLeft = Common.oLeft;
+            Common.mem_oTop = Common.oTop;
+
+            //Set setting for maximum coverage before capturing a single image for display
+            Common.oWidth = Common.MAXpixelwidth / Common.inCameraBinning;
+            Common.oHeight = Common.MAXpixelheight / Common.inCameraBinning;
+            Common.oLeft = 1;
+            Common.oTop = 1;
+        }
 
         SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
-
-                int err = setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 1, 1, Common.size_b, Common.arraysize);
+                int err = setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 1, 1, Common.size_b, Common.arraysize, Common_Photometrics.readoutPortIndex, Common_Photometrics.readoutSpeedIndex);
                 if (err != 0) {
                     IJ.showMessage("SetParameter return " + err);
                 }
@@ -346,55 +370,70 @@ public class Photometrics_PVCAM_SDK {
                     DirectCapturePanel.DisplayImageObj.updateImage(tempIntArray, Common.inCameraBinning, Common.MAXpixelwidth, Common.MAXpixelheight, Common.isCropMode);
                 }
 
-                boolean alteredDim = false;
-                if (Common.ip != null) {
-                    alteredDim = (Common.ip.getHeight() * Common.ip.getWidth()) != Common.arraysingleS.length;
-                }
-
-                if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
-                    Common.ip = new ShortProcessor(Common.oWidth, Common.oHeight);
-                }
-
-                for (int y = 0; y < Common.oHeight; y++) {
-                    for (int x = 0; x < Common.oWidth; x++) {
-                        int index = (y * Common.oWidth) + x;
-                        Common.ip.putPixel(x, y, (short) Common.arraysingleS[index]);
+                if (!isFF) { // display extra images onto Fiji
+                    boolean alteredDim = false;
+                    if (Common.ip != null) {
+                        alteredDim = (Common.ip.getHeight() * Common.ip.getWidth()) != Common.arraysingleS.length;
                     }
-                }
 
-                if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
-                    if (Common.impwin != null) {
-                        Common.impwin.close();
+                    if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
+                        Common.ip = new ShortProcessor(Common.oWidth, Common.oHeight);
                     }
-                    Common.imp = new ImagePlus("Single Scan", Common.ip);
-                    Common.imp.show();
 
-                    Common.impwin = Common.imp.getWindow();
-                    Common.impcan = Common.imp.getCanvas();
-                    Common.impwin.setLocation(impwinposx, impwinposy);
+                    for (int y = 0; y < Common.oHeight; y++) {
+                        for (int x = 0; x < Common.oWidth; x++) {
+                            int index = (y * Common.oWidth) + x;
+                            Common.ip.putPixel(x, y, (short) Common.arraysingleS[index]);
+                        }
+                    }
 
-                    //enlarge image to see better pixels
-                    if (Common.oWidth >= Common.oHeight) {
-                        Common.scimp = Common.zoomFactor / Common.oWidth; //adjustable: zoomFactor is by default 250 (see parameter definitions), a value chosen as it produces a good size on the screen
+                    if (Common.impwin == null || Common.imp == null || (Common.impwin != null && Common.imp != null) && Common.impwin.isClosed() || alteredDim) {
+                        if (Common.impwin != null) {
+                            Common.impwin.close();
+                        }
+                        Common.imp = new ImagePlus("Single Scan", Common.ip);
+                        Common.imp.show();
+
+                        Common.impwin = Common.imp.getWindow();
+                        Common.impcan = Common.imp.getCanvas();
+                        Common.impwin.setLocation(impwinposx, impwinposy);
+
+                        //enlarge image to see better pixels
+                        if (Common.oWidth >= Common.oHeight) {
+                            Common.scimp = Common.zoomFactor / Common.oWidth; //adjustable: zoomFactor is by default 250 (see parameter definitions), a value chosen as it produces a good size on the screen
+                        } else {
+                            Common.scimp = Common.zoomFactor / Common.oHeight;
+                        }
+                        if (Common.scimp < 1.0) {
+                            Common.scimp = 1.0;
+                        }
+                        Common.scimp *= 100;// transfrom this into %tage to run ImageJ command
+                        IJ.run(Common.imp, "Original Scale", "");
+                        IJ.run(Common.imp, "Set... ", "zoom=" + Common.scimp + " x=" + (int) Math.floor(Common.oWidth / 2) + " y=" + (int) Math.floor(Common.oHeight / 2));
+                        IJ.run("In [+]", ""); 	// This needs to be used since ImageJ 1.48v to set the window to the right size; 
+                        // this might be a bug and is an ad hoc solution for the moment; before only the "Set" command was necessary
+
+                        Common.impcan.setFocusable(true);
                     } else {
-                        Common.scimp = Common.zoomFactor / Common.oHeight;
+                        //(Common.impwin != null && Common.imp != null) && !Common.impwin.isClosed()
+                        Common.ip.resetMinAndMax();
+                        Common.imp.updateAndDraw();
                     }
-                    if (Common.scimp < 1.0) {
-                        Common.scimp = 1.0;
-                    }
-                    Common.scimp *= 100;// transfrom this into %tage to run ImageJ command
-                    IJ.run(Common.imp, "Original Scale", "");
-                    IJ.run(Common.imp, "Set... ", "zoom=" + Common.scimp + " x=" + (int) Math.floor(Common.oWidth / 2) + " y=" + (int) Math.floor(Common.oHeight / 2));
-                    IJ.run("In [+]", ""); 	// This needs to be used since ImageJ 1.48v to set the window to the right size; 
-                    // this might be a bug and is an ad hoc solution for the moment; before only the "Set" command was necessary
-
-                    Common.impcan.setFocusable(true);
-                } else {
-                    //(Common.impwin != null && Common.imp != null) && !Common.impwin.isClosed()
-                    Common.ip.resetMinAndMax();
-                    Common.imp.updateAndDraw();
                 }
+
                 return null;
+            }
+
+            @Override
+            protected void done() {
+
+                //Reset previos setting
+                if (isFF) {
+                    Common.oWidth = Common.mem_oWidth;
+                    Common.oHeight = Common.mem_oHeight;
+                    Common.oLeft = Common.mem_oLeft;
+                    Common.oTop = Common.mem_oTop;
+                }
             }
         };
         worker.execute();
@@ -422,7 +461,7 @@ public class Photometrics_PVCAM_SDK {
 
                 // JNI call SetParameter
                 timer1 = System.currentTimeMillis();
-                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize);
+                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_Photometrics.readoutPortIndex, Common_Photometrics.readoutSpeedIndex);
 
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 // Receive real kinetic cycle and display in GUI
@@ -485,7 +524,7 @@ public class Photometrics_PVCAM_SDK {
 
                 // JNI call SetParameter
                 timer1 = System.currentTimeMillis();
-                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize);
+                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_Photometrics.readoutPortIndex, Common_Photometrics.readoutSpeedIndex);
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 // Receive real kinetic cycle and display in GUI
                 Common.kineticCycleTime = Common.exposureTime;
@@ -530,7 +569,7 @@ public class Photometrics_PVCAM_SDK {
             protected Void doInBackground() throws Exception {
                 Thread.currentThread().setName("runThread_noncumulativeV3");
 
-                final int noThread = 4; // number of working threads  //5
+                final int noThread = 5; // number of working threads  
                 final int fbuffersize = Common.size_a * Common.size_b; // number of frame
 
                 // Control flow reset, buffer reset
@@ -546,7 +585,7 @@ public class Photometrics_PVCAM_SDK {
 
                 // JNI call SetParameter
                 timer1 = System.currentTimeMillis();
-                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, Common.totalFrame, fbuffersize, Common.arraysize);
+                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, Common.totalFrame, fbuffersize, Common.arraysize, Common_Photometrics.readoutPortIndex, Common_Photometrics.readoutSpeedIndex);
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 // Receive real kinetic cycle and display in GUI
                 Common.kineticCycleTime = Common.exposureTime;
@@ -557,12 +596,14 @@ public class Photometrics_PVCAM_SDK {
                 LiveVideoWorkerV3Instant = new LiveVideoWorkerV3(Common.tempWidth, Common.tempHeight, latch);
                 BufferToStackWorkerInstant = new BufferToStackWorker(Common.tempWidth, Common.tempHeight, Common.totalFrame, latch, Common.arraysize);
                 CumulativeACFWorkerV3Instant = new CumulativeACFWorkerV3(latch);
+                NonCumulativeACFWorkerV3Instant = new NonCumulativeACFWorkerV3(Common.tempWidth, Common.tempHeight, latch, Common.arraysize);
 
                 long timeelapse = System.nanoTime();
                 CppToJavaTransferWorkerEXTENDEDV2Instant.execute();
                 LiveVideoWorkerV3Instant.execute();
                 BufferToStackWorkerInstant.execute();
                 CumulativeACFWorkerV3Instant.execute();
+                NonCumulativeACFWorkerV3Instant.execute();
 
                 latch.await();
                 System.out.println("***Acquisition V3");
@@ -576,6 +617,8 @@ public class Photometrics_PVCAM_SDK {
                 DirectCapturePanel.tbStartStop.setSelected(false);
                 DirectCapturePanel.tfTotalFrame.setEditable(true);
                 DirectCapturePanel.tfExposureTime.setEditable(true);
+                Common.fitStartCumulative = 1;
+                DirectCapturePanel.tfCumulativeFitStart.setText(Integer.toString(Common.fitStartCumulative));
                 System.out.println("Native counter cpp: " + Common.framecounter.getCounter() + ", time overall: " + Common.framecounter.time1 + ", time average readbuffer combin: " + Common.framecounter.time2 + ", time JNI copy: " + Common.framecounter.time3 + ", JNI transfer: " + (Common.tempWidth * Common.tempHeight * 2 / Common.framecounter.time3) + " MBps, fps(cap): " + (1 / Common.framecounter.time3) + "Common.framecounterIMSX: " + Common.framecounterIMSX.getCount());
                 System.out.println("***");
                 System.out.println("");
@@ -608,7 +651,7 @@ public class Photometrics_PVCAM_SDK {
 
                 // JNI call setParameter
                 timer1 = System.currentTimeMillis();
-                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize);
+                setParameterPVCAM(Common.exposureTime, Common.oWidth, Common.oHeight, Common.oLeft, Common.oTop, Common.inCameraBinning, 2, 1000000000, fbuffersize, Common.arraysize, Common_Photometrics.readoutPortIndex, Common_Photometrics.readoutSpeedIndex);
                 printlog("Time SetParameter: " + (System.currentTimeMillis() - timer1) + "ms");
                 // Receive real kinetic cycle and display in GUI
                 Common.kineticCycleTime = Common.exposureTime;
@@ -717,7 +760,7 @@ public class Photometrics_PVCAM_SDK {
 
         //write Metadata 
         int t;
-        int nopm = 16;
+        int nopm = 20;
         String[] metadatatag = new String[nopm];
         String[] metadatavalue = new String[nopm];
         t = 0;
@@ -734,6 +777,10 @@ public class Photometrics_PVCAM_SDK {
         metadatatag[t++] = "Exposure time (ms)";
         metadatatag[t++] = "Sensor Height (pixels)";
         metadatatag[t++] = "Sensor Width (pixels)";
+        metadatatag[t++] = "Frame Transfer";
+        metadatatag[t++] = "PMode";
+        metadatatag[t++] = "Bit-depth";
+        metadatatag[t++] = "Readout frequency (MHz)";
         metadatatag[t++] = "Software";
         metadatatag[t++] = "SDK";
         metadatatag[t++] = "Time Stamp";
@@ -752,8 +799,12 @@ public class Photometrics_PVCAM_SDK {
         metadatavalue[t++] = Double.toString(Photometrics_PVCAM_SDK.getDoubleValuePVCAM("exposuretime"));
         metadatavalue[t++] = Double.toString(Photometrics_PVCAM_SDK.GetDetectorDimPVCAM()[0]);
         metadatavalue[t++] = Double.toString(Photometrics_PVCAM_SDK.GetDetectorDimPVCAM()[1]);
-        metadatavalue[t++] = "DirectCameraReadout_" + directCameraReadout.gui.DirectCapturePanel.VERSION;
-        metadatavalue[t++] = "SDK_" + VERSION;
+        metadatavalue[t++] = Double.toString(Photometrics_PVCAM_SDK.getDoubleValuePVCAM("frameTransfer"));
+        metadatavalue[t++] = Double.toString(Photometrics_PVCAM_SDK.getDoubleValuePVCAM("PMODE"));
+        metadatavalue[t++] = Double.toString(Photometrics_PVCAM_SDK.getDoubleValuePVCAM("BIT_DEPTH"));
+        metadatavalue[t++] = Double.toString(Photometrics_PVCAM_SDK.getDoubleValuePVCAM("readoutFrequency"));
+        metadatavalue[t++] = "DirectCameraReadout_" + DCR_VERSION;
+        metadatavalue[t++] = "SDK_" + PVCAMSDK4_VERSION;
         Date date = new Date();
         long time = date.getTime();
         Timestamp ts = new Timestamp(time);

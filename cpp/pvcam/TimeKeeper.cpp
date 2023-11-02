@@ -3,11 +3,9 @@
 #include <iostream>
 
 TimeKeeper::TimeKeeper() {
-	std::cout << "constructor timekeeper..." << std::endl;
 }
 
 TimeKeeper::~TimeKeeper() {
-	std::cout << "destructor timekeeper..." << std::endl;
 }
 
 void TimeKeeper::setTimeStart() {

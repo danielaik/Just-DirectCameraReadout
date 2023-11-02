@@ -1,5 +1,5 @@
 /******************************************************************************/
-/* Copyright (C) Roper Scientific, Inc. All rights reserved.                  */
+/* Copyright (C) Teledyne Photometrics. All rights reserved.                  */
 /******************************************************************************/
 
 #ifndef _MASTER_H
@@ -28,8 +28,8 @@ to cope properly with C++ definitions.
   #define PV_DECL
   #define DEPRECATED __attribute__((deprecated))
 #elif defined(__APPLE__)
-  #error TODO: Declare PV_DECL calling convention
-  #error TODO: Declare DEPRECATED definition
+  #define PV_DECL
+  #define DEPRECATED __attribute__((deprecated))
 #endif
 
 /******************************************************************************/
@@ -62,11 +62,11 @@ typedef double         flt64;
 #endif
 
 /**
-@defgroup grp_pm_deprecated Deprecated PVCAM symbols
+@defgroup grp_pm_deprecated Deprecated symbols
 */
 
 /**
-@defgroup grp_pm_deprecated_typedefs Deprecated PVCAM types
+@defgroup grp_pm_deprecated_typedefs Deprecated types
 @ingroup grp_pm_deprecated
 These types are included for compatibility reasons.
 @{

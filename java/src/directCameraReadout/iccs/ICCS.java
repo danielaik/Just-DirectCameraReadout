@@ -72,7 +72,7 @@ public class ICCS {
     }
 
     private void printlog(String msg) {
-        if (true) {
+        if (false) {
             IJ.log(msg);
         }
     }

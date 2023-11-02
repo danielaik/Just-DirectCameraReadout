@@ -34,8 +34,11 @@ import org.apache.commons.math3.special.Erf;
 import gpufitImFCS.GpufitImFCS;
 
 import directCameraReadout.gui.DirectCapturePanel;
-import static directCameraReadout.gui.DirectCapturePanel.$mode;
 import directCameraReadout.gui.DirectCapturePanel.Common;
+
+import static directCameraReadout.gui.parameterName.modeType.$amode;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class ImFCSCorrelator {
 
@@ -59,7 +62,7 @@ public class ImFCSCorrelator {
         this.imp2 = imp2;
     }
 
-    public boolean settingPlotOption(boolean plotACF, boolean plotTrace, boolean plotAverage, boolean plotJustCCF, int CCFdistX, int CCFdistY, boolean plotCalibrationAmplitude, boolean plotCalibrationDiffusion, boolean isResetCalibPlot, int noaver, int InputBackground, boolean plotCalibrationIntensity, boolean isCalibFixScale) {
+    public boolean settingPlotOption(boolean plotACF, boolean plotTrace, boolean plotAverage, boolean plotJustCCF, int CCFdistX, int CCFdistY, boolean plotCalibrationAmplitude, boolean plotCalibrationDiffusion, boolean isResetCalibPlot, int noaver, int InputBackground, boolean plotCalibrationIntensity, boolean isCalibFixScale, String tempAnalyMode, int fitstart) {
         this.plotACFCurves = plotACF;
         this.plotIntensityCurves = plotTrace;
         this.plotAverage = plotAverage;
@@ -69,6 +72,7 @@ public class ImFCSCorrelator {
         this.plotCalibrationIntensity = plotCalibrationIntensity;
         this.isResetCalib = isResetCalibPlot;
         this.isCalibFixScale = isCalibFixScale;
+        this.tempAnalysisMode = tempAnalyMode;
 
         this.cfXDistance = CCFdistX;
         this.cfYDistance = CCFdistY;
@@ -86,7 +90,7 @@ public class ImFCSCorrelator {
         }
         fixfitpar = true;
 
-        if ((cfXDistance != 0 || cfYDistance != 0) && (DirectCapturePanel.Common.$selectedMode.equals("Calibration"))) {
+        if ((cfXDistance != 0 || cfYDistance != 0) && (tempAnalysisMode.equals($amode[1]))) {//non-cumulative
             use2imp = true;
             if (imp.getStackSize() != imp2.getStackSize()) {
                 IJ.log("imp imp2 incompatible size");
@@ -100,14 +104,14 @@ public class ImFCSCorrelator {
         width = imp.getWidth();
         height = imp.getHeight();
         frames = imp.getStackSize();
-        firstframe = 1;
+        firstframe = fitstart;
         lastframe = frames;
         frametime = DirectCapturePanel.Common.kineticCycleTime; // kinetic cycle not exposure time
         polyOrder = DirectCapturePanel.Common.polynomDegree;
         binningX = DirectCapturePanel.Common.BinXSoft;
         binningY = DirectCapturePanel.Common.BinYSoft;
         correlatorp = DirectCapturePanel.Common.correlator_p;
-        if (DirectCapturePanel.Common.$selectedMode.equals("Acquisition")) { //improve Q with more frame
+        if (tempAnalysisMode.equals($amode[2])) { //cumulative //improve Q with more frame
             correlatorq = DirectCapturePanel.multiTauCorrelatorCalculator.getQgivenFrame(DirectCapturePanel.Common.correlator_p, DirectCapturePanel.Common.correlator_q, frames, DirectCapturePanel.Common.dataPtsLastChannel); //adjust Q according to avaialble frame ( recommended Q <= specified Q
         } else { // Q indepenent of no frame
             correlatorq = DirectCapturePanel.multiTauCorrelatorCalculator.getQgivenFrame(DirectCapturePanel.Common.correlator_p, DirectCapturePanel.Common.correlator_q, frames, DirectCapturePanel.Common.dataPtsLastChannel_calibration);
@@ -271,7 +275,9 @@ public class ImFCSCorrelator {
     private int chanum; 				// number of total channels of the correlator
     private double[] lagtime; 				// lagtime array which stores the correlation times; dimensions [chanum]; defined in setParameters()
     private double imaxsc; 				// scale for intensity plot
-    private double iminsc;// array with information whether a parameter is fit (true) or hold (false)
+    private double iminsc;
+    private double imaxsx;                                  // x-axis scale limit for intensity plot
+    private double iminsx;
     private double maxsc; 				// scale for ACF plot
     private double minsc;
     private double maxsx;                               // x-axis scale limit for ACF plot
@@ -315,8 +321,9 @@ public class ImFCSCorrelator {
     private boolean plotCalibrationIntensity = false;
     private boolean isResetCalib = false;
     private boolean isCalibFixScale; // setting true will remove autoscaling for 3 calibration plot: diffusion, amplitude, and intensity
-    // blocking curve will not be plotted by default	
+    private String tempAnalysisMode; // read whether to calculate cumulative or non-cumulative CF; update parameter from GUI
 
+    // blocking curve will not be plotted by default	
     // Plot window
     Plot iplot; //Intensity plot
     Plot acfPlot; //ACF plot
@@ -392,35 +399,42 @@ public class ImFCSCorrelator {
         100
     };
 
-    public ImFCSCorrelator() {
+    //Mode
+    String $titlePrefix;
 
+    public ImFCSCorrelator(String prefix) {
+        $titlePrefix = prefix;
     }
 
-    public void closeWindowsACF() {
+    private void closeWindowsACF() {
         if (acfWindow != null && acfWindow.isClosed() == false) {
             acfWindow.close();
         }
     }
 
-    public void closeWindowsTrace() {
+    private void closeWindowsTrace() {
         if (intWindow != null && intWindow.isClosed() == false) {
             intWindow.close();
         }
     }
 
-    public void closeWindows() {
-        if (acfWindow != null && acfWindow.isClosed() == false) {
-            acfWindow.close();
-        }
-        if (intWindow != null && intWindow.isClosed() == false) {
-            intWindow.close();
-        }
+    private void closeWindowsCalibration() {
+
         if (ampCalibWindow != null && ampCalibWindow.isClosed() == false) {
             ampCalibWindow.close();
         }
         if (intCalibWindow != null && intCalibWindow.isClosed() == false) {
             intCalibWindow.close();
         }
+        if (DiffCalibWindow != null && DiffCalibWindow.isClosed() == false) {
+            DiffCalibWindow.close();
+        }
+    }
+
+    public void closeWindowsAll() {
+        closeWindowsACF();
+        closeWindowsTrace();
+        closeWindowsCalibration();
     }
 
     public void runPlotACF() {
@@ -492,13 +506,13 @@ public class ImFCSCorrelator {
             Roi impRoi1;
             Roi impRoi2;
 
-            if (DirectCapturePanel.Common.$selectedMode.equals($mode[2])) { //calibration
+            if (tempAnalysisMode.equals($amode[1])) { //non-cumulative
                 impRoi1 = new Roi(0, 0, roi1WidthX, roi1HeightY);
                 if (use2imp) {
                     impRoi2 = new Roi(0, 0, roi1WidthX, roi1HeightY);
                     imp2.setRoi(impRoi2);
                 }
-            } else { //acquisition
+            } else { //cumulative
                 impRoi1 = new Roi(DirectCapturePanel.Common.lLeft - 1, DirectCapturePanel.Common.lTop - 1, DirectCapturePanel.Common.lWidth, DirectCapturePanel.Common.lHeight);
             }
 
@@ -746,7 +760,7 @@ public class ImFCSCorrelator {
                     }
                 }
 
-                if ((plotCalibrationAmplitude || plotCalibrationDiffusion || plotCalibrationIntensity) && (DirectCapturePanel.Common.$selectedMode.equals($mode[2]))) {
+                if ((plotCalibrationAmplitude || plotCalibrationDiffusion || plotCalibrationIntensity) && (tempAnalysisMode.equals($amode[1]))) {//non-cumulative
 
                     fillCalibList(noaverpts); // by default average first 3 point of correlatione excluding 0
 
@@ -833,7 +847,7 @@ public class ImFCSCorrelator {
         maxsc = acf[ct][cpx1][cpy1][1];		// minimum and maximum setting for plot window
         minsc = 1000;						// set minsc to a high value to make sure it is not 0
 
-        if (DirectCapturePanel.Common.$selectedMode == $mode[2]) {
+        if (tempAnalysisMode.equals($amode[1])) {//non-cumulative
             minsx = lagtime[1];
             maxsx = 2 * lagtime[chanum - 1];
         } else {
@@ -963,8 +977,7 @@ public class ImFCSCorrelator {
             minsc -= minsc * 0.1;
             maxsc += maxsc * 0.1;
 
-            if (acfWindow == null || acfWindow.isClosed() == true) {
-            } else {
+            if (!(acfWindow == null || acfWindow.isClosed() == true) && !Common.isAutoAdjustACFintensityTraceScale) {
                 // settting scale limit
                 double[] minmax = acfPlot.getLimits();
                 // setting y-axis scale
@@ -974,14 +987,20 @@ public class ImFCSCorrelator {
                 // setting x-axis scale
                 maxsx = minmax[1];
                 minsx = minmax[0];
-
-//                // setting frame size
-//                //setting frame size
-//                Dimension tempDim = acfPlot.getSize();
-//                tempXdim = (int) tempDim.getWidth() - 96; // 96 is an arbitrary number
-//                tempYdim = (int) tempDim.getHeight() - 63; // 63 is an arbitrary number
             }
 
+//            if (acfWindow == null || acfWindow.isClosed() == true) {
+//            } else {
+//                // settting scale limit
+//                double[] minmax = acfPlot.getLimits();
+//                // setting y-axis scale
+//                maxsc = minmax[3];
+//                minsc = minmax[2];
+//
+//                // setting x-axis scale
+//                maxsx = minmax[1];
+//                minsx = minmax[0];
+//            }
             //create empty plot
             acfPlot = new Plot($acfWindowTitle, "tau [s]", "G(tau)", empty, empty);
             acfPlot.setFrameSize(tempXdim, tempYdim);
@@ -1000,11 +1019,11 @@ public class ImFCSCorrelator {
 
             // create plot label for ACF of CCF
             if (cfXDistance + cfYDistance != 0 && cftype != 2) {
-                acfPlot.addLabel(0.5, 0, " CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
+                acfPlot.addLabel(0.5, 0, $titlePrefix + " - CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
             } else if (cfXDistance + cfYDistance != 0 && cftype == 2) {
-                acfPlot.addLabel(0.5, 0, " CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
+                acfPlot.addLabel(0.5, 0, $titlePrefix + " - CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
             } else {
-                acfPlot.addLabel(0.5, 0, " ACFs from the ROI at " + binningX + "x" + binningY + "binning");
+                acfPlot.addLabel(0.5, 0, $titlePrefix + " - ACFs from the ROI at " + binningX + "x" + binningY + "binning");
             }
 
             // plot all CFs and if fit has been performed, add fits
@@ -1104,10 +1123,9 @@ public class ImFCSCorrelator {
             minsc -= minsc * 0.1;
             maxsc += maxsc * 0.1;
 
-            if (acfWindow == null || acfWindow.isClosed() == true) {
-            } else {
+            if (!(acfWindow == null || acfWindow.isClosed() == true) && !Common.isAutoAdjustACFintensityTraceScale) {
+                // settting scale limit
                 double[] minmax = acfPlot.getLimits();
-
                 // setting y-axis scale
                 maxsc = minmax[3];
                 minsc = minmax[2];
@@ -1115,13 +1133,20 @@ public class ImFCSCorrelator {
                 // setting x-axis scale
                 maxsx = minmax[1];
                 minsx = minmax[0];
-
-//                //setting frame size
-//                Dimension tempDim = acfPlot.getSize();
-//                tempXdim = (int) tempDim.getWidth() - 96; // 96 is an arbitrary number
-//                tempYdim = (int) tempDim.getHeight() - 63; // 63 is an arbitrary number
             }
 
+//            if (acfWindow == null || acfWindow.isClosed() == true) {
+//            } else {
+//                double[] minmax = acfPlot.getLimits();
+//
+//                // setting y-axis scale
+//                maxsc = minmax[3];
+//                minsc = minmax[2];
+//
+//                // setting x-axis scale
+//                maxsx = minmax[1];
+//                minsx = minmax[0];
+//            }
             // plot
             acfPlot = new Plot($acfWindowTitle, "tau [s]", "G(tau)");
             acfPlot.setFrameSize(tempXdim, tempYdim);
@@ -1155,7 +1180,8 @@ public class ImFCSCorrelator {
                     }
                 }
             }
-            acfPlot.addLabel(0.5, 0, " ACF1, ACF2, CCF of (" + cpx1 * pixbinX + ", " + cpy1 * pixbinY + ")" + " and (" + cpx2 * pixbinX + ", " + cpy2 * pixbinY + ")" + " at (" + binningX + "x" + binningY + "binning");
+            acfPlot.addLabel(0.5, 0, $titlePrefix + " - auto and cross CFs" + " at (" + binningX + "x" + binningY + "binning");
+//            acfPlot.addLabel(0.5, 0, " ACF1, ACF2, CCF of (" + cpx1 * pixbinX + ", " + cpy1 * pixbinY + ")" + " and (" + cpx2 * pixbinX + ", " + cpy2 * pixbinY + ")" + " at (" + binningX + "x" + binningY + "binning");
             acfPlot.draw();
 
             // if fit has been performed add the fit to the plot
@@ -1176,7 +1202,6 @@ public class ImFCSCorrelator {
                 acfWindow = acfPlot.show();
                 acfWindow.setLocation(acfWindowPosX, acfWindowPosY);
             } else {
-
                 acfWindow.drawPlot(acfPlot);
                 acfWindow.setTitle($acfWindowTitle);
             }
@@ -1207,7 +1232,7 @@ public class ImFCSCorrelator {
             }
 
 //            //Print G(1), average G(1,2,3), average G(1,2,3,4,5). TODO: Plot the graph live
-//            if (DirectCapturePanel.Common.$selectedMode == "Calibration") {
+//            if (tempAnalysisMode == DirectCapturePanel.$amode[1]) {
 //                double ampMean = 0;
 //                IJ.log("---------------------");
 //                IJ.log("G(1): " + aveacf[kcf][1]);
@@ -1227,10 +1252,9 @@ public class ImFCSCorrelator {
             minsc -= minsc * 0.1;
             maxsc += maxsc * 0.1;
 
-            if (acfWindow == null || acfWindow.isClosed() == true) {
-            } else {
+            if (!(acfWindow == null || acfWindow.isClosed() == true) && !Common.isAutoAdjustACFintensityTraceScale) {
+                // settting scale limit
                 double[] minmax = acfPlot.getLimits();
-
                 // setting y-axis scale
                 maxsc = minmax[3];
                 minsc = minmax[2];
@@ -1238,13 +1262,20 @@ public class ImFCSCorrelator {
                 // setting x-axis scale
                 maxsx = minmax[1];
                 minsx = minmax[0];
-
-//                //setting frame size
-//                Dimension tempDim = acfPlot.getSize();
-//                tempXdim = (int) tempDim.getWidth() - 96; // 96 is an arbitrary number
-//                tempYdim = (int) tempDim.getHeight() - 63; // 63 is an arbitrary number
             }
 
+//            if (acfWindow == null || acfWindow.isClosed() == true) {
+//            } else {
+//                double[] minmax = acfPlot.getLimits();
+//
+//                // setting y-axis scale
+//                maxsc = minmax[3];
+//                minsc = minmax[2];
+//
+//                // setting x-axis scale
+//                maxsx = minmax[1];
+//                minsx = minmax[0];
+//            }
             // plot
             acfPlot = new Plot($acfWindowTitle, "tau [s]", "G(tau)", lagtime, aveacf[kcf]);
             acfPlot.setFrameSize(tempXdim, tempYdim);
@@ -1254,7 +1285,7 @@ public class ImFCSCorrelator {
             acfPlot.setJustification(Plot.CENTER);
 
             // create plot label for ACF of CCF
-            acfPlot.addLabel(0.5, 0, " Average ACF ");
+            acfPlot.addLabel(0.5, 0, $titlePrefix + " - Average ACF ");
 
             acfPlot.draw();
 
@@ -1314,10 +1345,9 @@ public class ImFCSCorrelator {
             minsc -= minsc * 0.1;
             maxsc += maxsc * 0.1;
 
-            if (acfWindow == null || acfWindow.isClosed() == true) {
-            } else {
+            if (!(acfWindow == null || acfWindow.isClosed() == true) && !Common.isAutoAdjustACFintensityTraceScale) {
+                // settting scale limit
                 double[] minmax = acfPlot.getLimits();
-
                 // setting y-axis scale
                 maxsc = minmax[3];
                 minsc = minmax[2];
@@ -1325,13 +1355,20 @@ public class ImFCSCorrelator {
                 // setting x-axis scale
                 maxsx = minmax[1];
                 minsx = minmax[0];
-
-//                //setting frame size
-//                Dimension tempDim = acfPlot.getSize();
-//                tempXdim = (int) tempDim.getWidth() - 96; // 96 is an arbitrary number
-//                tempYdim = (int) tempDim.getHeight() - 63; // 63 is an arbitrary number
             }
 
+//            if (acfWindow == null || acfWindow.isClosed() == true) {
+//            } else {
+//                double[] minmax = acfPlot.getLimits();
+//
+//                // setting y-axis scale
+//                maxsc = minmax[3];
+//                minsc = minmax[2];
+//
+//                // setting x-axis scale
+//                maxsx = minmax[1];
+//                minsx = minmax[0];
+//            }
             // plot
             acfPlot = new Plot($acfWindowTitle, "tau [s]", "G(tau)");
             acfPlot.setFrameSize(tempXdim, tempYdim);
@@ -1346,7 +1383,8 @@ public class ImFCSCorrelator {
             acfPlot.addPoints(lagtime, aveacf[2], Plot.LINE);
 
             // create plot label for ACF of CCF
-            acfPlot.addLabel(0.5, 0, " Average ACF1, ACF2, CCF of (" + cpx1 * pixbinX + ", " + cpy1 * pixbinY + ")" + " and (" + cpx2 * pixbinX + ", " + cpy2 * pixbinY + ")" + " at (" + binningX + "x" + binningY + "binning");
+            acfPlot.addLabel(0.5, 0, $titlePrefix + " - Average auto and cross CF" + " at (" + binningX + "x" + binningY + "binning");
+//            acfPlot.addLabel(0.5, 0, " Average ACF1, ACF2, CCF of (" + cpx1 * pixbinX + ", " + cpy1 * pixbinY + ")" + " and (" + cpx2 * pixbinX + ", " + cpy2 * pixbinY + ")" + " at (" + binningX + "x" + binningY + "binning");
             acfPlot.draw();
 
             // if fit has been performed add the fit to the plot
@@ -1395,10 +1433,9 @@ public class ImFCSCorrelator {
             minsc -= minsc * 0.1;
             maxsc += maxsc * 0.1;
 
-            if (acfWindow == null || acfWindow.isClosed() == true) {
-            } else {
+            if (!(acfWindow == null || acfWindow.isClosed() == true) && !Common.isAutoAdjustACFintensityTraceScale) {
+                // settting scale limit
                 double[] minmax = acfPlot.getLimits();
-
                 // setting y-axis scale
                 maxsc = minmax[3];
                 minsc = minmax[2];
@@ -1406,13 +1443,20 @@ public class ImFCSCorrelator {
                 // setting x-axis scale
                 maxsx = minmax[1];
                 minsx = minmax[0];
-
-//                //setting frame size
-//                Dimension tempDim = acfPlot.getSize();
-//                tempXdim = (int) tempDim.getWidth() - 96; // 96 is an arbitrary number
-//                tempYdim = (int) tempDim.getHeight() - 63; // 63 is an arbitrary number
             }
 
+//            if (acfWindow == null || acfWindow.isClosed() == true) {
+//            } else {
+//                double[] minmax = acfPlot.getLimits();
+//
+//                // setting y-axis scale
+//                maxsc = minmax[3];
+//                minsc = minmax[2];
+//
+//                // setting x-axis scale
+//                maxsx = minmax[1];
+//                minsx = minmax[0];
+//            }
             //create empty plot
             acfPlot = new Plot($acfWindowTitle, "tau [s]", "G(tau)", empty, empty);
             acfPlot.setFrameSize(tempXdim, tempYdim);
@@ -1426,11 +1470,11 @@ public class ImFCSCorrelator {
 
             // create plot label for ACF of CCF
             if (cfXDistance + cfYDistance != 0 && cftype != 2) {
-                acfPlot.addLabel(0.5, 0, " CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
+                acfPlot.addLabel(0.5, 0, $titlePrefix + " - CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
             } else if (cfXDistance + cfYDistance != 0 && cftype == 2) {
-                acfPlot.addLabel(0.5, 0, " CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
+                acfPlot.addLabel(0.5, 0, $titlePrefix + " - CCFs of pixels in the ROIs at " + binningX + "x" + binningY + "binning");
             } else {
-                acfPlot.addLabel(0.5, 0, " ACFs from the ROI at " + binningX + "x" + binningY + "binning");
+                acfPlot.addLabel(0.5, 0, $titlePrefix + " - ACFs from the ROI at " + binningX + "x" + binningY + "binning");
             }
 
             // plot all CFs and if fit has been performed, add fits
@@ -1552,6 +1596,8 @@ public class ImFCSCorrelator {
 
         iminsc = intTrace1[1];		// minimum and maximum setting for plot window
         imaxsc = intTrace1[1];
+        iminsx = intTime[1];
+        imaxsx = intTime[nopit - 1];
         int tempXdim = intWindowDimX;
         int tempYdim = intWindowDimY;
 
@@ -1580,19 +1626,24 @@ public class ImFCSCorrelator {
             iminsc -= iminsc * 0.1;		// maximum scales are to be 10% larger than maximum value and 10% smaller than minimum value
             imaxsc += imaxsc * 0.1;
 
-            if (intWindow == null || intWindow.isClosed() == true) {
-            } else {
-//                Dimension tempDim = iplot.getSize();
-//                tempXdim = (int) tempDim.getWidth() - 96; // 96 is an arbitrary number
-//                tempYdim = (int) tempDim.getHeight() - 63; // 63 is an arbitrary number
+            if (!(intWindow == null || intWindow.isClosed() == true) && !Common.isAutoAdjustACFintensityTraceScale) {
+                //recall scaling
 
+                // settting scale limit
+                double[] minmax = iplot.getLimits();
+                // setting y-axis scale
+                imaxsc = minmax[3];
+                iminsc = minmax[2];
+
+                // setting x-axis scale
+                imaxsx = minmax[1];
+                iminsx = minmax[0];
             }
 
             //plot intensity traces
             iplot = new Plot($intWindowTitle, "time [s]", "Intensity", intTime, intTrace1);
             iplot.setFrameSize(tempXdim, tempYdim);
-            iplot.setLimits(intTime[1], intTime[nopit - 1], iminsc, imaxsc);
-
+            iplot.setLimits(iminsx, imaxsx, iminsc, imaxsc);
             if ((ipx1 - ipx2) != 0 || (ipy1 - ipy2) != 0) {
                 iplot.setColor(java.awt.Color.GREEN);
             } else {
@@ -1622,6 +1673,7 @@ public class ImFCSCorrelator {
                 intWindow.drawPlot(iplot);
                 intWindow.setTitle($intWindowTitle);
             }
+
         }
 
         if (cormode == 2) {
@@ -1638,17 +1690,24 @@ public class ImFCSCorrelator {
             iminsc -= iminsc * 0.1;		// maximum scales are to be 10% larger than maximum value and 10% smaller than minimum value
             imaxsc += imaxsc * 0.1;
 
-            if (intWindow == null || intWindow.isClosed() == true) {
-            } else {
-//                Dimension tempDim = iplot.getSize();
-//                tempXdim = (int) tempDim.getWidth() - 96; // 96 is an arbitrary number
-//                tempYdim = (int) tempDim.getHeight() - 63; // 63 is an arbitrary number
+            if (!(intWindow == null || intWindow.isClosed() == true) && !Common.isAutoAdjustACFintensityTraceScale) {
+                //recall scaling
+
+                // settting scale limit
+                double[] minmax = iplot.getLimits();
+                // setting y-axis scale
+                imaxsc = minmax[3];
+                iminsc = minmax[2];
+
+                // setting x-axis scale
+                imaxsx = minmax[1];
+                iminsx = minmax[0];
             }
 
             //plot intensity traces
             iplot = new Plot($intWindowTitle, "time [s]", "Intensity", intTime, intTrace1);
             iplot.setFrameSize(tempXdim, tempYdim);
-            iplot.setLimits(intTime[1], intTime[nopit - 1], iminsc, imaxsc);
+            iplot.setLimits(iminsx, imaxsx, iminsc, imaxsc);
             iplot.addLabel(0, 0, "Average intensity trace of whole ROI");
             iplot.setJustification(Plot.LEFT);
             iplot.setColor(java.awt.Color.BLUE);
@@ -1661,6 +1720,7 @@ public class ImFCSCorrelator {
                 intWindow.drawPlot(iplot);
                 intWindow.setTitle($intWindowTitle);
             }
+
         }
 
     }
@@ -2954,16 +3014,15 @@ public class ImFCSCorrelator {
     }
 
     public void printParam() {
-        printlog("--fromImFCSCPUGPU class");
-        printlog("use2imp: " + use2imp);
-        printlog("selectedMode: " + Common.$selectedMode);
-        printlog("fitModel: " + fitModel);
-        printlog("CCF x: " + cfXDistance + ", CCF y: " + cfYDistance);
-        printlog("width: " + width + ", height: " + height + ", frames: " + frames + ", firstframe: " + firstframe + ", lastframe: " + lastframe + ", frametime: " + frametime);
-        printlog("polyorder: " + polyOrder + ",bleachCorMem: " + bleachCorMem + ", binningX: " + binningX + ", binningY: " + binningY + ", correlator p: " + correlatorp + ", correlator q: " + correlatorq + ", doFit: " + doFit + ", overlap: " + overlap);
-        printlog("isgpupresent: " + Common.isgpupresent + ", runongpu: " + Common.RunLiveReadOutOnGPU + ", impmin: " + impmin);
-        printlog("--fromImFCSCPUGPU class");
-
+//        printlog("--fromImFCSCPUGPU class");
+//        printlog("use2imp: " + use2imp);
+//        printlog("selectedMode: " + Common.selectedMode + ", analysisMode: " + tempAnalysisMode);
+//        printlog("fitModel: " + fitModel);
+//        printlog("CCF x: " + cfXDistance + ", CCF y: " + cfYDistance);
+//        printlog("width: " + width + ", height: " + height + ", frames: " + frames + ", firstframe: " + firstframe + ", lastframe: " + lastframe + ", frametime: " + frametime);
+//        printlog("polyorder: " + polyOrder + ",bleachCorMem: " + bleachCorMem + ", binningX: " + binningX + ", binningY: " + binningY + ", correlator p: " + correlatorp + ", correlator q: " + correlatorq + ", doFit: " + doFit + ", overlap: " + overlap);
+//        printlog("isgpupresent: " + Common.isgpupresent + ", runongpu: " + Common.RunLiveReadOutOnGPU + ", impmin: " + impmin);
+//        printlog("--fromImFCSCPUGPU class");
     }
 
     // determine minimum value in stack
@@ -3003,7 +3062,7 @@ public class ImFCSCorrelator {
         //userThreshold[0] = false;			//user has not set any threshold
         //userThreshold[2] = false;						// tresholds haven't been applied on the data
 
-        if ((plotCalibrationAmplitude || plotCalibrationDiffusion || plotCalibrationIntensity) && (DirectCapturePanel.Common.$selectedMode == "Calibration")) {
+        if ((plotCalibrationAmplitude || plotCalibrationDiffusion || plotCalibrationIntensity) && (tempAnalysisMode.equals($amode[1]))) {//non-cumulative
             // instantiate everysingle cycle
             if (calibParamListofList == null) {
                 calibParamListofList = new ArrayList<ArrayList<Double>>(nocalpar);

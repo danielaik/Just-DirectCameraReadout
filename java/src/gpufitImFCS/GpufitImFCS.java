@@ -11,6 +11,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.file.Files;
+import static version.VERSION.GPUFIT_VERSION;
 
 /**
  * NOTE: Code amended from original gpufit code to put all files into a single
@@ -35,12 +36,11 @@ import java.nio.file.Files;
 public class GpufitImFCS {
 
     // NOTE: 
-    // VERSION of the used Gpufit library.
-    // VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this VERSION num in Fiji.App > jars.
-    public static final String VERSION = "v1_0_0";
+    // GPUFIT_VERSION of the used Gpufit library.
+    // GPUFIT_VERSION must be updated when .dll/.so files are changed so that they are placed in a new sub-folder named after this GPUFIT_VERSION num in Fiji.App > jars.
     public static boolean IsOperatingSystemOK = false;
     public static boolean IsLoadingLibraryOK = false;
-    private static final String CUBLASDLLFN = "cublas64_92.dll";
+    private static final String CUBLASDLLFN = "cublas64_92.dll"; //"cublas64_11.dll"
     public static String ALERT;
 
     static {
@@ -87,8 +87,8 @@ public class GpufitImFCS {
                         tempdir.mkdir();
                     }
 
-                    File gpufitImFCS_cublas_dir = new File(tempdir.toString() + "/" + VERSION);
-//                    File gpufitImFCS_cublas_dir = new File(Fiji_jars_dir.toString() + "/gpufitImFCS-cublas/" + VERSION);
+                    File gpufitImFCS_cublas_dir = new File(tempdir.toString() + "/" + GPUFIT_VERSION);
+//                    File gpufitImFCS_cublas_dir = new File(Fiji_jars_dir.toString() + "/gpufitImFCS-cublas/" + GPUFIT_VERSION);
                     libDirPath = gpufitImFCS_cublas_dir.toString();
 
                     boolean Write_Cublas = IsWindows;
@@ -140,7 +140,7 @@ public class GpufitImFCS {
                         System.out.println(thisAlert);
                     }
                 }
-                // Proceed to load gpufit.dll. It may still work if user has Cuda Toolkit installed.
+                // Proceed to load agpufit.dll. It may still work if user has Cuda Toolkit installed.
                 System.load(libDirPath + "/" + libName);
                 IsLoadingLibraryOK = true;
             }
@@ -480,6 +480,8 @@ public class GpufitImFCS {
         public int bleachcorr_order;
         public int nopit;
         public int ave;
+        public int fitstart;
+        public int fitend;
 
         public ACFParameters() {
         }
@@ -880,7 +882,8 @@ public class GpufitImFCS {
 
         // ACF_1D function is a generalized function which can be used for fitting auto and cross-correlation functions.
         // LINEAR_1D function is for polynomial bleach correction fitting.
-        GAUSS_2D(1, 5), ACF_1D(2, 20), LINEAR_1D(3, 11);
+        // ACF_NUMERICAL_3D is a generalized model used to calculate auto and cross-correlation functions paraneters numerically for SPIM-FCS.
+        GAUSS_2D(1, 5), ACF_1D(2, 20), LINEAR_1D(3, 11), ACF_NUMERICAL_3D(4, 20);
 
         public final int id, numberParameters;
 

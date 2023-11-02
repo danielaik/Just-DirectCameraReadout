@@ -134,20 +134,11 @@ void ImagePVCam::InitArray() {
             assert((false) && "unable to allocate memory uns16");
         }
 
-        pImageArrayShort_ = (short*)malloc(arraysize_ * sizeof(short));
-        if (pImageArrayShort_ == NULL)
+        pImageArray8bit_ = (uns8*)malloc(arraysize_ * sizeof(uns8));
+        if (pImageArray8bit_ == NULL)
         {
             CloseCameraAndUninit();
-            assert((false) && "unable to allocate memory short");
-        }
-    }
-    else if (acqmode_ == 2) {
-        buffSize_ = arraysize_ * circBufferFrames_; // in pixel
-        pImageCircularBuffer_ = (uns16*)malloc(buffSize_ * sizeof(uns16));
-        if (pImageCircularBuffer_ == NULL)
-        {
-            CloseCameraAndUninit();
-            assert((false) && "unable to allocate circular buffer memory");
+            assert((false) && "unable to allocate memory uns8");
         }
 
         pImageArrayShort_ = (short*)malloc(arraysize_ * sizeof(short));
@@ -156,6 +147,45 @@ void ImagePVCam::InitArray() {
             CloseCameraAndUninit();
             assert((false) && "unable to allocate memory short");
         }
+
+
+    }
+    else if (acqmode_ == 2) {
+        
+       
+        circBufferBytes_ = circBufferFrames_ * exposureBytes_;
+        circBufferInMemory_ = new (std::nothrow) uns8[circBufferBytes_];
+        if (!circBufferInMemory_)
+        {
+            CloseCameraAndUninit();
+            assert((false) && "Unable to allocate buffer for camera");
+        }
+
+        if (circBufferInMemory_ == NULL)
+        {
+            CloseCameraAndUninit();
+            assert((false) && "unable to allocate circular buffer memory");
+        }
+        
+        /*
+        buffSize_ = arraysize_ * circBufferFrames_; // in pixel
+        pImageCircularBuffer_ = (uns16*)malloc(buffSize_ * sizeof(uns16));
+        if (pImageCircularBuffer_ == NULL)
+        {
+            CloseCameraAndUninit();
+            assert((false) && "unable to allocate circular buffer memory");
+        }
+        */
+
+        pImageArrayShort_ = (short*)malloc(arraysize_ * sizeof(short));
+        if (pImageArrayShort_ == NULL)
+        {
+            CloseCameraAndUninit();
+            assert((false) && "unable to allocate memory short");
+        }
+
+   
+
     }
     else {
         assert((false) && "err 66 acqmode_ neihter setted to 1 or 2");
@@ -171,21 +201,42 @@ void ImagePVCam::freeImArray() {
             pImageArray_ = NULL;
         }
 
-        if (pImageArrayShort_) {
-            free(pImageArrayShort_);
-            pImageArrayShort_ = NULL;
-        }
-    }
-    else if (acqmode_ == 2) {
-        if (pImageCircularBuffer_) {
-            free(pImageCircularBuffer_);
-            pImageCircularBuffer_ = NULL;
+        if (pImageArray8bit_) {
+            free(pImageArray8bit_);
+            pImageArray8bit_ = NULL;
         }
 
         if (pImageArrayShort_) {
             free(pImageArrayShort_);
             pImageArrayShort_ = NULL;
         }
+
+ 
+
+    }
+    else if (acqmode_ == 2) {
+
+      
+        if (circBufferInMemory_) {
+            free(circBufferInMemory_);
+            circBufferInMemory_ = NULL;
+        }
+       
+
+        /*
+        if (pImageCircularBuffer_) {
+            free(pImageCircularBuffer_);
+            pImageCircularBuffer_ = NULL;
+        }
+         */
+
+        if (pImageArrayShort_) {
+            free(pImageArrayShort_);
+            pImageArrayShort_ = NULL;
+        }
+
+
+ 
     }
     else {
         assert((false) && "err 67 acqmode_ neihter setted to 1 or 2");
@@ -227,7 +278,7 @@ void ImagePVCam::setupSequence() {
         //std::cout << "exposureBytes: " << exposureBytes_ << " bytes" << std::endl;
         //std::cout << "size of each frames: " << oneFrameBytes_ << " bytes" << std::endl;
 
-        assert(((exposureBytes_ / sizeof(uns16)) == arraysize_) && "error 32 setupSequence unmatched arraysize_");
+        //assert(((exposureBytes_ / sizeof(uns16)) == arraysize_) && "error 32 setupSequence unmatched arraysize_"); //Not applicable as some mode uses 8bit, 12bit, and 16bit
     }
     else if (acqmode_ == 2) {
         dataContext.myData1 = 0;
@@ -257,13 +308,148 @@ void ImagePVCam::setupSequence() {
             assert((false) && "error 34 setupSequence");
         }
 
-        assert(((exposureBytes_ / sizeof(uns16)) == arraysize_) && "error 32 setupSequence unmatched arraysize_");
+        //assert(((exposureBytes_ / sizeof(uns16)) == arraysize_) && "error 32 setupSequence unmatched arraysize_");//Not applicable as some mode uses 8bit, 12bit, and 16bit
     }
     else {
         assert((false) && "acqmode_ neihter setted to 1 or 2");
     }
     
 
+}
+
+
+void ImagePVCam::setFrameTransfer() {
+    
+    // Find out if the sensor is a frame transfer or other (typically interline)
+    // type. This is a two-step process.
+    // Please, follow the procedure below in your applications.
+    if (PV_OK != pl_get_param(g_hCam, PARAM_FRAME_CAPABLE, ATTR_AVAIL,
+        (void*)&g_IsFrameTransfer))
+    {
+        g_IsFrameTransfer = 0;
+        assert((false) && "pl_get_param(PARAM_FRAME_CAPABLE) error");
+        return;
+    }
+
+    if (g_IsFrameTransfer == TRUE)
+    {
+        if (PV_OK != pl_get_param(g_hCam, PARAM_FRAME_CAPABLE, ATTR_CURRENT,
+            (void*)&g_IsFrameTransfer))
+        {
+            g_IsFrameTransfer = 0;
+            assert((false) && "pl_get_param(PARAM_FRAME_CAPABLE) error");
+            return;
+        }
+        if (g_IsFrameTransfer == TRUE)
+            std::cout << "Camera with Frame Transfer capability sensor" << std::endl;
+    }
+    if (g_IsFrameTransfer == FALSE)
+    {
+        g_IsFrameTransfer = 0;
+        std::cout << "Camera without Frame Transfer capability sensor" << std::endl;
+    }
+
+    // If this is a Frame Transfer sensor set PARAM_PMODE to PMODE_FT.
+    // The other common mode for these sensors is PMODE_ALT_FT.
+    if (!IsParamAvailable(PARAM_PMODE, "PARAM_PMODE"))
+        return;
+    if (g_IsFrameTransfer == TRUE)
+    {
+        int32 PMode = PMODE_FT;
+        if (PV_OK != pl_set_param(g_hCam, PARAM_PMODE, (void*)&PMode))
+        {
+            assert((false) && "pl_set_param(PARAM_PMODE) error");
+            return;
+        }
+    }
+    // If not a Frame Transfer sensor (i.e. Interline), set PARAM_PMODE to
+    // PMODE_NORMAL, or PMODE_ALT_NORMAL.
+    else
+    {
+        int32 PMode = PMODE_NORMAL;
+        if (PV_OK != pl_set_param(g_hCam, PARAM_PMODE, (void*)&PMode))
+        {
+            assert((false) && "pl_set_param(PARAM_PMODE) error");
+            return;
+        }
+    }
+
+   
+}
+
+
+
+int ImagePVCam::getTotalPortNo() {
+    if (!ReadEnumeration(&ports_, PARAM_READOUT_PORT, "PARAM_READOUT_PORT"))
+        return 0;
+
+    return (int) ports_.size();
+}
+
+int ImagePVCam::getSpeedCount(int indexPort) {
+    // Set readout port
+    if (PV_OK != pl_set_param(g_hCam, PARAM_READOUT_PORT,
+        (void*)&ports_[indexPort].value))
+    {
+        assert((false) && "pl_set_param(PARAM_READOUT_PORT) error1");
+        return 0;
+    }
+
+    // Get number of available speeds for this port
+    uns32 speedCount;
+    if (PV_OK != pl_get_param(g_hCam, PARAM_SPDTAB_INDEX, ATTR_COUNT,
+        (void*)&speedCount))
+    {
+        assert((false) && "pl_get_param(PARAM_SPDTAB_INDEX) error1");
+        return 0;
+    }
+    return (int) speedCount;
+}
+
+int ImagePVCam::setPortAndSpeedPair(int indexPort, int indexSpeed) {
+    // Set readout port
+    if (PV_OK != pl_set_param(g_hCam, PARAM_READOUT_PORT,
+        (void*)&ports_[indexPort].value))
+    {
+        assert((false) && "pl_set_param(PARAM_READOUT_PORT) error2");
+        return 0;
+    }
+
+    // Set camera to new speed index
+    if (PV_OK != pl_set_param(g_hCam, PARAM_SPDTAB_INDEX, (void*)&indexSpeed))
+    {
+        assert((false) && "pl_set_param(g_hCam, PARAM_SPDTAB_INDEX) error2");
+        return 0;
+    }
+    return 1;
+}
+
+void ImagePVCam::setExposureTime(double exptime) {
+    //exptime is in unit of seconds
+
+    // defines units in which the exposure time is passed to #pl_exp_setup_seq and #pl_exp_setup_cont 
+
+    if (exptime >= 1) {
+        ExpResMode_ = EXP_RES_ONE_SEC;
+        exposureTime_ = exptime;//s
+    }
+    else if (exptime >= 0.001) {
+        ExpResMode_ = EXP_RES_ONE_MILLISEC;
+        exposureTime_ = exptime * 1000; // milli
+    }
+    else {
+        ExpResMode_ = EXP_RES_ONE_MICROSEC;
+        exposureTime_ = exptime * 1000000; // microseconds
+    }
+
+
+
+    if (PV_OK != pl_set_param(g_hCam, PARAM_EXP_RES, (void*)&ExpResMode_))
+    {
+        assert((false) && "pl_set_param(PARAM_EXP_RES) error");
+    }
+
+    return;
 }
 
 
